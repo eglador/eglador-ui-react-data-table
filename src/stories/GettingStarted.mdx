@@ -1,0 +1,47 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+
+<Meta title="Getting Started" />
+
+# Getting Started
+
+> **Status:** Pre-alpha — the API is being designed. This page will be filled out once the first component lands. The package scaffold (build, Storybook, CI) is already in place.
+
+---
+
+## What's ready
+
+- Build pipeline (`tsup` → CJS + ESM + DTS)
+- TypeScript strict mode (`tsc --noEmit`)
+- Tailwind v4 + `@source` integration
+- Storybook 10 with `@storybook/addon-docs`, `@storybook/addon-a11y`, `@storybook/addon-vitest`
+- CI / npm publish workflows
+- LICENSE, README, package metadata
+
+## What's next
+
+- Column / row API design
+- Compound subcomponents (`<DataTable.Root>`, `.Header`, `.Body`, `.Row`, `.Cell`, `.Pagination`)
+- Headless hook (`useDataTable`) for fully custom rendering
+- Sorting / pagination / filtering state machines
+- Row selection with controlled / uncontrolled modes
+- Server-side mode
+- Storybook stories: Playground, Variants, Pagination, Sorting, Filtering, Selection, ServerSide, Empty / Loading, Headless
+
+---
+
+## Setup recap
+
+If you haven't installed the package yet, see the **Installation** page.
+
+```bash
+npm install eglador-ui-react-data-table
+```
+
+```css
+@import "tailwindcss";
+@source "../node_modules/eglador-ui-react-data-table";
+```
+
+---
+
+For bugs or suggestions, open an [issue on GitHub](https://github.com/eglador/eglador-ui-react-data-table/issues).

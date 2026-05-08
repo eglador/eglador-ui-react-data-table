@@ -1,0 +1,67 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+
+<Meta title="Welcome" />
+
+<img src="/eglador-logo.svg" alt="eglador-ui-react-data-table" width="160" style={{ marginBottom: 24 }} />
+
+# eglador-ui-react-data-table
+
+<div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16 }}>
+  <img src="https://img.shields.io/npm/v/eglador-ui-react-data-table?style=flat-square&color=blue" alt="npm version" />
+  <img src="https://img.shields.io/npm/dm/eglador-ui-react-data-table?style=flat-square&color=green" alt="npm downloads" />
+  <img src="https://img.shields.io/npm/l/eglador-ui-react-data-table?style=flat-square" alt="license" />
+  <img src="https://img.shields.io/badge/zero%20deps-runtime-22C55E?style=flat-square" alt="zero runtime deps" />
+  <img src="https://img.shields.io/badge/tailwindcss-v4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white" alt="tailwind v4" />
+  <img src="https://img.shields.io/badge/react-%3E%3D18-61DAFB?style=flat-square&logo=react&logoColor=white" alt="react >= 18" />
+  <img src="https://img.shields.io/badge/typescript-ready-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="typescript" />
+</div>
+
+Headless, accessible data table for React — column management, sorting, pagination, filtering, row selection, and a compound API for full markup control. Tailwind v4, zero runtime dependencies.
+
+> **Status:** Pre-alpha — API design in progress. The package scaffold (build, Storybook, CI) is in place; component implementation is next.
+
+---
+
+## Installation
+
+```bash
+npm install eglador-ui-react-data-table
+```
+
+## Setup
+
+Add the following to your global stylesheet (e.g. `app/globals.css`):
+
+```css
+@import "tailwindcss";
+@source "../node_modules/eglador-ui-react-data-table";
+```
+
+---
+
+## Planned Features
+
+- **Compound API** — `<DataTable.Root>`, `.Header`, `.Body`, `.Row`, `.Cell`, `.Pagination` for full markup control
+- **Column management** — declarative column definitions with custom renderers, sortability, visibility, resizing
+- **Sorting** — single / multi-column, controlled or uncontrolled, custom comparators
+- **Pagination** — built-in pager with page size, jump-to, total count
+- **Filtering** — column-level filters, global search, custom predicates
+- **Row selection** — single / multiple, controlled or uncontrolled, with select-all
+- **Empty / loading / error states** — first-class slots, no flash-of-empty
+- **Server-side mode** — opt out of internal state for sorting / pagination / filtering when data lives on the server
+- **Accessible** — semantic `<table>` markup, full keyboard navigation, ARIA roles for sortable headers and live status
+- **TypeScript-first** — generic over row shape, every column inferred
+- **Zero runtime dependencies** — only `clsx` + `tailwind-merge`, both pre-bundled
+
+---
+
+## Links
+
+- [GitHub](https://github.com/eglador/eglador-ui-react-data-table)
+- [npm](https://www.npmjs.com/package/eglador-ui-react-data-table)
+
+---
+
+**Author:** Kenan Gündoğan — [github.com/kenangundogan](https://github.com/kenangundogan)
+
+Maintained under [Eglador](https://github.com/eglador).
