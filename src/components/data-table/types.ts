@@ -416,6 +416,11 @@ export interface SchemaPagination {
   max_size?: number;
 }
 
+export interface SchemaListView {
+  fields: string[];
+  relations: string[];
+}
+
 export interface ResourceSchema {
   type: string;
   filters: SchemaFilter[];
@@ -425,6 +430,12 @@ export interface ResourceSchema {
   default_includes: string[];
   fields: string[];
   pagination: SchemaPagination;
+  views?: {
+    list?: SchemaListView;
+    show?: SchemaListView;
+    create?: unknown[];
+    update?: unknown[];
+  };
   validation?: Record<string, unknown>;
   operations?: Record<string, unknown>;
   meta?: Record<string, unknown>;

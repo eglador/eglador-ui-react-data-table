@@ -267,7 +267,8 @@ function DataTableInner<TData>(
 
   const columns = useAutoColumns<TData>({
     fields: discovered,
-    visibleColumns: props.visibleColumns,
+    visibleColumns:
+      props.visibleColumns ?? derived.listFields ?? undefined,
     hideColumns: props.hideColumns,
     customColumns: mergedCustomColumns,
     addColumns: props.addColumns,
@@ -437,6 +438,7 @@ interface DerivedConfig {
   defaultPageSize: number;
   pageSizeOptions: number[];
   filterMap: Map<string, ColumnFilterConfig>;
+  listFields: string[] | null;
 }
 
 function deriveFromSchema(schema: ResourceSchema): DerivedConfig {
@@ -462,16 +464,42 @@ function deriveFromSchema(schema: ResourceSchema): DerivedConfig {
   const maxPageSize = schema.pagination?.max_size;
   const pageSizeOptions = buildPageSizeOptions(defaultPageSize, maxPageSize);
 
+  const listView = schema.views?.list;
+  const listRelations = listView?.relations;
+  const listFields = listView?.fields;
+  const defaultIncludes =
+    listRelations && listRelations.length > 0
+      ? listRelations
+      : (schema.default_includes ?? []);
+
+  const visibleFields =
+    listFields && listFields.length > 0
+      ? mergeListFieldsWithRelations(listFields, listRelations)
+      : null;
+
   return {
     searchField,
     allowedSorts: schema.sorts ?? [],
     allowedFilters: Array.from(filterMap.keys()),
-    defaultIncludes: schema.default_includes ?? [],
+    defaultIncludes,
     defaultSort,
     defaultPageSize,
     pageSizeOptions,
     filterMap,
+    listFields: visibleFields,
   };
+}
+
+function mergeListFieldsWithRelations(
+  fields: string[],
+  relations: string[] | undefined,
+): string[] {
+  if (!relations || relations.length === 0) return fields;
+  const out = [...fields];
+  for (const r of relations) {
+    if (!out.includes(r)) out.push(r);
+  }
+  return out;
 }
 
 function schemaFilterToConfig(f: SchemaFilter): ColumnFilterConfig | null {

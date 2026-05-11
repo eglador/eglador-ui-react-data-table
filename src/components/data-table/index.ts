@@ -186,6 +186,7 @@ export type {
   SchemaFilter,
   SchemaFilterOperator,
   SchemaFilterType,
+  SchemaListView,
   SchemaPagination,
   SelectOperator,
   SortDirection,
