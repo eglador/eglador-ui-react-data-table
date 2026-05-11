@@ -109,6 +109,9 @@ export type { UseDataSourceReturn } from "./request";
 
 export { ensureDataTableStyles } from "./styles";
 
+export { useSchema, inferSchemaEndpoint } from "./use-schema";
+export type { UseSchemaResult } from "./use-schema";
+
 export {
   useUrlSyncedState,
   parseQueryFromUrl,
@@ -179,6 +182,12 @@ export type {
   SelectColumnDef,
   SelectionMode,
   SelectionState,
+  ResourceSchema,
+  SchemaFilter,
+  SchemaFilterOperator,
+  SchemaFilterType,
+  SchemaListView,
+  SchemaPagination,
   SelectOperator,
   SortDirection,
   SortValue,

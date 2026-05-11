@@ -379,3 +379,64 @@ export interface UrlSyncConfig {
   onChange?: (params: URLSearchParams) => void;
   initialParams?: URLSearchParams;
 }
+
+export type SchemaFilterType =
+  | "string"
+  | "integer"
+  | "number"
+  | "boolean"
+  | "enum"
+  | "date"
+  | "datetime";
+
+export type SchemaFilterOperator =
+  | "exact"
+  | "partial"
+  | "scope"
+  | "fulltext"
+  | "gte"
+  | "lte"
+  | "gt"
+  | "lt"
+  | "in"
+  | "not_in";
+
+export interface SchemaFilter {
+  field: string;
+  type: SchemaFilterType;
+  operator: SchemaFilterOperator;
+  values?: (string | number | boolean)[];
+}
+
+export interface SchemaPagination {
+  strategy?: string;
+  size_parameter?: string;
+  number_parameter?: string;
+  default_size?: number;
+  max_size?: number;
+}
+
+export interface SchemaListView {
+  fields: string[];
+  relations: string[];
+}
+
+export interface ResourceSchema {
+  type: string;
+  filters: SchemaFilter[];
+  sorts: string[];
+  default_sort?: string;
+  includes: string[];
+  default_includes: string[];
+  fields: string[];
+  pagination: SchemaPagination;
+  views?: {
+    list?: SchemaListView;
+    show?: SchemaListView;
+    create?: unknown[];
+    update?: unknown[];
+  };
+  validation?: Record<string, unknown>;
+  operations?: Record<string, unknown>;
+  meta?: Record<string, unknown>;
+}

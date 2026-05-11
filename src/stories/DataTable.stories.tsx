@@ -20,58 +20,10 @@ interface Article {
   tags: { id: number; name: string; slug: string }[];
 }
 
-const ARTICLE_STATUS_OPTIONS = [
-  { value: "published", label: "Published" },
-  { value: "draft", label: "Draft" },
-  { value: "scheduled", label: "Scheduled" },
-  { value: "archived", label: "Archived" },
-];
-
-// === Storybook arg / control helpers ================================
-
 const cat = (name: string) => ({ table: { category: name } });
 
 function safeArray<T>(v: unknown, fallback: T[] = []): T[] {
   return Array.isArray(v) ? (v as T[]) : fallback;
-}
-
-function safeStringMap(
-  v: unknown,
-  fallback: Record<string, string> = {},
-): Record<string, string> {
-  if (!v || typeof v !== "object" || Array.isArray(v)) return fallback;
-  const out: Record<string, string> = {};
-  for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
-    if (typeof val === "string") out[k] = val;
-  }
-  return out;
-}
-
-function validSorts(
-  v: unknown,
-): { column: string; direction: "asc" | "desc" }[] {
-  if (!Array.isArray(v)) return [];
-  return v.filter(
-    (s): s is { column: string; direction: "asc" | "desc" } =>
-      !!s &&
-      typeof s === "object" &&
-      typeof (s as { column?: unknown }).column === "string" &&
-      ((s as { direction?: unknown }).direction === "asc" ||
-        (s as { direction?: unknown }).direction === "desc"),
-  );
-}
-
-function validFilters(
-  v: unknown,
-): { id?: string; column: string; operator: string; value: unknown }[] {
-  if (!Array.isArray(v)) return [];
-  return v.filter(
-    (f): f is { column: string; operator: string; value: unknown } =>
-      !!f &&
-      typeof f === "object" &&
-      typeof (f as { column?: unknown }).column === "string" &&
-      typeof (f as { operator?: unknown }).operator === "string",
-  );
 }
 
 function parseJsonObject<T>(raw: string | undefined, fallback: T): T {
@@ -114,60 +66,39 @@ function validAddColumns(v: unknown): AddedColumnArg[] {
   });
 }
 
-// === Args ==========================================================
-
 type PlaygroundArgs = {
-  // Identity
   title: string;
   description: string;
 
-  // Backend
   endpoint: string;
+  schemaEndpoint: string;
   headersJson: string;
-  paramNames: Record<string, string>;
-  responseShape: { rows?: string };
-  sparseFields: Record<string, string[]>;
 
-  // Columns
   visibleColumns: string[];
   hideColumns: string[];
 
-  // Sort
   sortable: boolean;
-  allowedSorts: string[];
-  defaultSort: { column: string; direction: "asc" | "desc" }[];
-
-  // Filter
   filters: boolean;
-  allowedFilters: string[];
+  search: boolean;
+  searchPlaceholder: string;
+  searchDebounceMs: number;
+
+  paginationEnabled: boolean;
+  paginationVariant: "full" | "simple";
+  paginationShowInfo: boolean;
+  defaultPageSize: number;
+
+  defaultSort: { column: string; direction: "asc" | "desc" }[];
   defaultFilters: {
     id?: string;
     column: string;
     operator: string;
     value: unknown;
   }[];
-
-  // Includes
-  allowedIncludes: string[];
   includes: string[];
 
-  // Search
-  search: boolean;
-  searchPlaceholder: string;
-  searchDebounceMs: number;
-
-  // Pagination
-  paginationEnabled: boolean;
-  paginationVariant: "full" | "simple";
-  paginationShowInfo: boolean;
-  defaultPageSize: number;
-  pageSizeOptions: number[];
-  paginationOptions: Record<string, string>;
-
-  // Selection
   selectionMode: "none" | "single" | "multiple";
 
-  // Layout
   density: boolean;
   columnVisibility: boolean;
   refresh: boolean;
@@ -179,11 +110,9 @@ type PlaygroundArgs = {
   bulkActionsBar: boolean;
   addColumns: AddedColumnArg[];
 
-  // URL Sync
   urlSync: boolean;
   urlSyncPrefix: string;
 
-  // Lifecycle
   debounce: number;
   keepPreviousData: boolean;
   refetchOnFocus: boolean;
@@ -191,7 +120,6 @@ type PlaygroundArgs = {
   refetchInterval: number;
   retryCount: number;
 
-  // Mutations
   optimisticUpdates: boolean;
 };
 
@@ -203,29 +131,18 @@ const meta: Meta<PlaygroundArgs> = {
     docs: {
       description: {
         component:
-          "Schema-driven `<DataTable>` against the live Laravel articles endpoint at `cms-api-mockdata.bitem.tr/api/v1/articles`. Every flag in the Controls panel wires straight to a component prop — toggle them to see how the table reshapes itself. Controls are grouped by concern (Identity, Backend, Columns, Sort, Filter, …).",
+          "Schema-driven `<DataTable>`. The component fetches the resource schema from `schemaEndpoint` (auto-inferred from `endpoint` if omitted) and derives `allowedSorts`, `allowedFilters`, filter UI types, default sort, default includes, page size, and search field routing automatically. You only configure display (columns, slots, toolbar features).",
       },
     },
   },
   args: {
-    // Identity
     title: "Articles",
-    description: "Live Laravel endpoint — 550 records, fully prop-driven.",
+    description: "Schema-driven Laravel/Spatie tablo.",
 
-    // Backend
-    endpoint: "https://cms-api-mockdata.bitem.tr/api/v1/articles",
+    endpoint: "http://127.0.0.1:8000/api/v1/articles",
+    schemaEndpoint: "",
     headersJson: "",
-    paramNames: {
-      page: "page[number]",
-      pageSize: "page[size]",
-      sort: "sort",
-      search: "filter[search]",
-      include: "include",
-    },
-    responseShape: { rows: "data" },
-    sparseFields: {},
 
-    // Columns
     visibleColumns: [
       "cover_image",
       "title",
@@ -237,59 +154,23 @@ const meta: Meta<PlaygroundArgs> = {
     ],
     hideColumns: [],
 
-    // Sort
     sortable: true,
-    allowedSorts: ["title", "published_at", "view_count", "reading_time"],
-    defaultSort: [{ column: "published_at", direction: "desc" }],
-
-    // Filter — matches the Spatie API filter list:
-    // category_id, user_id, status, title, featured, breaking, trending,
-    // search, tag, published_after, published_before
     filters: true,
-    allowedFilters: [
-      "category_id",
-      "user_id",
-      "status",
-      "title",
-      "featured",
-      "breaking",
-      "trending",
-      "tag",
-      "published_after",
-      "published_before",
-    ],
-    defaultFilters: [],
-
-    // Includes — Spatie allows: category, author, tags, media
-    allowedIncludes: ["category", "author", "tags", "media"],
-    includes: ["category", "author"],
-
-    // Search
     search: true,
     searchPlaceholder: "Search articles…",
     searchDebounceMs: 250,
 
-    // Pagination
     paginationEnabled: true,
     paginationVariant: "full",
     paginationShowInfo: true,
-    defaultPageSize: 15,
-    pageSizeOptions: [10, 25, 50, 100],
-    paginationOptions: {
-      currentPage: "meta.current_page",
-      lastPage: "meta.last_page",
-      perPage: "meta.per_page",
-      total: "meta.total",
-      path: "meta.path",
-      from: "meta.from",
-      to: "meta.to",
-      links: "links",
-    },
+    defaultPageSize: 0,
 
-    // Selection
+    defaultSort: [],
+    defaultFilters: [],
+    includes: [],
+
     selectionMode: "multiple",
 
-    // Layout
     density: true,
     columnVisibility: true,
     refresh: true,
@@ -304,11 +185,9 @@ const meta: Meta<PlaygroundArgs> = {
       { field: "actions", type: "actions", position: "end", label: "Actions" },
     ],
 
-    // URL Sync
     urlSync: false,
     urlSyncPrefix: "articles_",
 
-    // Lifecycle
     debounce: 300,
     keepPreviousData: true,
     refetchOnFocus: false,
@@ -316,18 +195,21 @@ const meta: Meta<PlaygroundArgs> = {
     refetchInterval: 0,
     retryCount: 1,
 
-    // Mutations
     optimisticUpdates: true,
   },
   argTypes: {
-    // === Identity ===
     title: { control: "text", ...cat("Identity") },
     description: { control: "text", ...cat("Identity") },
 
-    // === Backend ===
     endpoint: {
       control: "text",
-      description: "API endpoint URL.",
+      description: "Resource list endpoint.",
+      ...cat("Backend"),
+    },
+    schemaEndpoint: {
+      control: "text",
+      description:
+        "Schema endpoint. Empty = auto-infer from `endpoint` (insert `/schema/` before resource).",
       ...cat("Backend"),
     },
     headersJson: {
@@ -336,25 +218,7 @@ const meta: Meta<PlaygroundArgs> = {
         'JSON object string — e.g. `{"Authorization": "Bearer token"}`. Empty = none.',
       ...cat("Backend"),
     },
-    paramNames: {
-      control: "object",
-      description:
-        "Query-string param name overrides (page, pageSize, sort, sortDirection, search).",
-      ...cat("Backend"),
-    },
-    responseShape: {
-      control: "object",
-      description: "Path map for extracting the row array from the response.",
-      ...cat("Backend"),
-    },
-    sparseFields: {
-      control: "object",
-      description:
-        'Spatie sparse fieldsets — `?fields[resource]=id,title,…`. Example: `{ "articles": ["id","title","slug"] }`.',
-      ...cat("Backend"),
-    },
 
-    // === Columns ===
     visibleColumns: {
       control: "object",
       description:
@@ -364,133 +228,81 @@ const meta: Meta<PlaygroundArgs> = {
     hideColumns: {
       control: "object",
       description:
-        "Blacklist. Array of field ids. Ignored when `visibleColumns` is non-empty.",
+        "Blacklist. Ignored when `visibleColumns` is non-empty.",
       ...cat("Columns"),
     },
 
-    // === Sort ===
     sortable: {
       control: "boolean",
-      description: "Enable header sort buttons.",
-      ...cat("Sort"),
-    },
-    allowedSorts: {
-      control: "object",
-      description: "Array of server-side sortable column ids.",
-      ...cat("Sort"),
-    },
-    defaultSort: {
-      control: "object",
-      description: "Initial sort. Array of `{ column, direction }`.",
+      description:
+        "Enable header sort UI. Schema's `sorts` list controls WHICH columns are sortable.",
       ...cat("Sort"),
     },
 
-    // === Filter ===
     filters: {
       control: "boolean",
-      description: "Filter chips bar + add-filter button.",
-      ...cat("Filter"),
-    },
-    allowedFilters: {
-      control: "object",
-      description: "Array of server-side filterable column ids.",
-      ...cat("Filter"),
-    },
-    defaultFilters: {
-      control: "object",
       description:
-        "Initial filters. Array of `{ column, operator, value }`. Each filter auto-gets a stable id.",
+        "Show filter chips bar + add-filter button. Schema's `filters` array provides type/operator/options for each filterable field.",
       ...cat("Filter"),
     },
 
-    // === Includes ===
-    allowedIncludes: {
-      control: "object",
-      description: "Whitelisted relations the user may eager-load.",
-      ...cat("Includes"),
-    },
-    includes: {
-      control: "object",
-      description: "Relations always sent on every request.",
-      ...cat("Includes"),
-    },
-
-    // === Search ===
-    search: {
-      control: "boolean",
-      description: "Toolbar search input.",
-      ...cat("Search"),
-    },
+    search: { control: "boolean", ...cat("Search") },
     searchPlaceholder: { control: "text", ...cat("Search") },
     searchDebounceMs: {
       control: { type: "number", min: 0, max: 2000, step: 50 },
       ...cat("Search"),
     },
 
-    // === Pagination ===
     paginationEnabled: { control: "boolean", ...cat("Pagination") },
     paginationVariant: {
       control: "select",
       options: ["full", "simple"],
       ...cat("Pagination"),
     },
-    paginationShowInfo: {
-      control: "boolean",
-      description: "Show `Showing X-Y of Z` info.",
-      ...cat("Pagination"),
-    },
+    paginationShowInfo: { control: "boolean", ...cat("Pagination") },
     defaultPageSize: {
-      control: { type: "number", min: 5, max: 100, step: 5 },
-      ...cat("Pagination"),
-    },
-    pageSizeOptions: {
-      control: "object",
-      description: "Array of allowed page sizes in the size dropdown.",
-      ...cat("Pagination"),
-    },
-    paginationOptions: {
-      control: "object",
-      description:
-        "Response path map for pagination meta (currentPage, lastPage, total, etc.).",
+      control: { type: "number", min: 0, max: 200, step: 5 },
+      description: "0 = use schema's `pagination.default_size`.",
       ...cat("Pagination"),
     },
 
-    // === Selection ===
+    defaultSort: {
+      control: "object",
+      description:
+        "Override schema's `default_sort`. Array of `{ column, direction }`. Empty = use schema default.",
+      ...cat("Sort"),
+    },
+    defaultFilters: {
+      control: "object",
+      description:
+        "Initial filters. Array of `{ column, operator, value }`. Each entry auto-gets a stable id.",
+      ...cat("Filter"),
+    },
+    includes: {
+      control: "object",
+      description:
+        "Override schema's `default_includes`. Empty array = use schema default.",
+      ...cat("Includes"),
+    },
+
     selectionMode: {
       control: "select",
       options: ["none", "single", "multiple"],
       ...cat("Selection"),
     },
 
-    // === Layout ===
-    density: {
-      control: "boolean",
-      description: "Toolbar density toggle.",
-      ...cat("Layout"),
-    },
-    columnVisibility: {
-      control: "boolean",
-      description: "Toolbar column visibility menu.",
-      ...cat("Layout"),
-    },
-    refresh: {
-      control: "boolean",
-      description: "Toolbar refresh button.",
-      ...cat("Layout"),
-    },
+    density: { control: "boolean", ...cat("Layout") },
+    columnVisibility: { control: "boolean", ...cat("Layout") },
+    refresh: { control: "boolean", ...cat("Layout") },
     stickyHeader: {
       control: "boolean",
-      description: "Header sticks while body scrolls (needs `maxHeight > 0`).",
+      description: "Requires `maxHeight > 0`.",
       ...cat("Layout"),
     },
-    footerHeader: {
-      control: "boolean",
-      description: "Mirror the header at the bottom (sticky-bottom).",
-      ...cat("Layout"),
-    },
+    footerHeader: { control: "boolean", ...cat("Layout") },
     maxHeight: {
       control: { type: "number", min: 0, max: 1200, step: 40 },
-      description: "0 = no internal vertical scroll (page scrolls instead).",
+      description: "0 = no internal vertical scroll.",
       ...cat("Layout"),
     },
     variant: {
@@ -498,46 +310,23 @@ const meta: Meta<PlaygroundArgs> = {
       options: ["default", "bordered", "striped", "minimal"],
       ...cat("Layout"),
     },
-    toolbarEndButton: {
-      control: "boolean",
-      description: '"+ New article" button in `toolbarEnd` slot.',
-      ...cat("Layout"),
-    },
-    bulkActionsBar: {
-      control: "boolean",
-      description: "Render the bulk-actions bar when rows are selected.",
-      ...cat("Layout"),
-    },
+    toolbarEndButton: { control: "boolean", ...cat("Layout") },
+    bulkActionsBar: { control: "boolean", ...cat("Layout") },
     addColumns: {
       control: "object",
       description:
-        "Extra columns not in the API response. Each entry: `{ field, type: 'select' | 'drag' | 'actions' | 'expander', position: 'start' | 'end', label?, width? }`. The `actions` render is provided in code.",
+        "Extra columns. `{ field, type: 'select'|'drag'|'actions'|'expander', position: 'start'|'end', label?, width? }`. Actions render is provided in code.",
       ...cat("Layout"),
     },
 
-    // === URL Sync ===
-    urlSync: {
-      control: "boolean",
-      description: "Persist sort/filter/page state to the URL.",
-      ...cat("URL Sync"),
-    },
-    urlSyncPrefix: {
-      control: "text",
-      description: "Param prefix for this table — e.g. `articles_page`.",
-      ...cat("URL Sync"),
-    },
+    urlSync: { control: "boolean", ...cat("URL Sync") },
+    urlSyncPrefix: { control: "text", ...cat("URL Sync") },
 
-    // === Lifecycle ===
     debounce: {
       control: { type: "number", min: 0, max: 2000, step: 50 },
-      description: "ms delay before re-fetching on filter/sort/search change.",
       ...cat("Lifecycle"),
     },
-    keepPreviousData: {
-      control: "boolean",
-      description: "Stale-while-revalidate — show old data during refetch.",
-      ...cat("Lifecycle"),
-    },
+    keepPreviousData: { control: "boolean", ...cat("Lifecycle") },
     refetchOnFocus: { control: "boolean", ...cat("Lifecycle") },
     refetchOnReconnect: { control: "boolean", ...cat("Lifecycle") },
     refetchInterval: {
@@ -550,12 +339,7 @@ const meta: Meta<PlaygroundArgs> = {
       ...cat("Lifecycle"),
     },
 
-    // === Mutations ===
-    optimisticUpdates: {
-      control: "boolean",
-      description: "Apply mutations optimistically (revert on error).",
-      ...cat("Mutations"),
-    },
+    optimisticUpdates: { control: "boolean", ...cat("Mutations") },
   },
 };
 
@@ -567,24 +351,11 @@ export const Playground: StoryObj<PlaygroundArgs> = {
       args.headersJson,
       {},
     );
-    const headers = Object.keys(parsedHeaders).length > 0 ? parsedHeaders : undefined;
-
-    const paramNames = safeStringMap(args.paramNames);
-    const responseShape = safeStringMap(args.responseShape) as {
-      rows?: string;
-    };
-    const paginationOptions = safeStringMap(args.paginationOptions);
-    const pageSizeOptions = safeArray<number>(args.pageSizeOptions, [10, 25, 50, 100])
-      .filter((n) => typeof n === "number" && n > 0);
+    const headers =
+      Object.keys(parsedHeaders).length > 0 ? parsedHeaders : undefined;
 
     const visibleColumns = safeArray<string>(args.visibleColumns);
     const hideColumns = safeArray<string>(args.hideColumns);
-    const allowedSorts = safeArray<string>(args.allowedSorts);
-    const allowedFilters = safeArray<string>(args.allowedFilters);
-    const allowedIncludes = safeArray<string>(args.allowedIncludes);
-    const includes = safeArray<string>(args.includes);
-    const defaultSort = validSorts(args.defaultSort);
-    const defaultFilters = validFilters(args.defaultFilters);
 
     const actionsRender = (
       _value: unknown,
@@ -624,16 +395,12 @@ export const Playground: StoryObj<PlaygroundArgs> = {
 
     const addColumns = validAddColumns(args.addColumns).map((col) => ({
       ...col,
-      // The `actions` type carries a code-defined renderer (JSX can't survive
-      // JSON serialization). All other built-in types render their own UI.
       render: col.type === "actions" ? actionsRender : undefined,
     }));
 
     const remountKey = JSON.stringify([
       args.endpoint,
-      defaultSort,
-      defaultFilters,
-      includes,
+      args.schemaEndpoint,
       args.urlSync,
       args.urlSyncPrefix,
     ]);
@@ -646,27 +413,14 @@ export const Playground: StoryObj<PlaygroundArgs> = {
           description={args.description}
 
           endpoint={args.endpoint}
+          schemaEndpoint={args.schemaEndpoint || undefined}
           headers={headers}
-          paramNames={paramNames}
-          responseShape={responseShape}
-          sparseFields={args.sparseFields}
 
           visibleColumns={visibleColumns.length > 0 ? visibleColumns : undefined}
           hideColumns={hideColumns.length > 0 ? hideColumns : undefined}
 
           sortable={args.sortable}
-          allowedSorts={allowedSorts.length > 0 ? allowedSorts : undefined}
-          defaultSort={defaultSort}
-
           filters={args.filters}
-          allowedFilters={allowedFilters.length > 0 ? allowedFilters : undefined}
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          defaultFilters={defaultFilters as any}
-
-          allowedIncludes={
-            allowedIncludes.length > 0 ? allowedIncludes : undefined
-          }
-          includes={includes}
 
           search={
             args.search
@@ -680,14 +434,31 @@ export const Playground: StoryObj<PlaygroundArgs> = {
           pagination={
             args.paginationEnabled
               ? {
-                  pageSizeOptions,
                   variant: args.paginationVariant,
                   showInfo: args.paginationShowInfo,
-                  options: paginationOptions,
                 }
               : false
           }
-          defaultPageSize={args.defaultPageSize}
+          defaultPageSize={
+            args.defaultPageSize > 0 ? args.defaultPageSize : undefined
+          }
+
+          defaultSort={
+            Array.isArray(args.defaultSort) && args.defaultSort.length > 0
+              ? args.defaultSort
+              : undefined
+          }
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          defaultFilters={
+            Array.isArray(args.defaultFilters) && args.defaultFilters.length > 0
+              ? (args.defaultFilters as any)
+              : undefined
+          }
+          includes={
+            Array.isArray(args.includes) && args.includes.length > 0
+              ? args.includes
+              : undefined
+          }
 
           density={args.density}
           columnVisibility={args.columnVisibility}
@@ -739,7 +510,6 @@ export const Playground: StoryObj<PlaygroundArgs> = {
               field: "title",
               label: "Title",
               minWidth: 280,
-              filter: { type: "text", defaultOperator: "contains" },
               render: (_value, row) => (
                 <div className="flex flex-col gap-0.5 min-w-0 max-w-md">
                   <span className="font-medium text-zinc-900 truncate">
@@ -755,9 +525,6 @@ export const Playground: StoryObj<PlaygroundArgs> = {
               field: "category",
               label: "Category",
               accessor: (row) => row.category?.name,
-              // Server filter: `?filter[category_id]=5`
-              filterKey: "category_id",
-              filter: { type: "number" },
               render: (value) =>
                 value ? (
                   <span className="inline-flex items-center px-2 h-6 text-xs rounded-sm bg-zinc-100 text-zinc-700">
@@ -771,14 +538,10 @@ export const Playground: StoryObj<PlaygroundArgs> = {
               field: "author",
               label: "Author",
               accessor: (row) => row.author?.name,
-              // Server filter: `?filter[user_id]=12`
-              filterKey: "user_id",
-              filter: { type: "number" },
             },
             {
               field: "status",
               label: "Status",
-              filter: { type: "select", options: ARTICLE_STATUS_OPTIONS },
               render: (value) => {
                 const s = String(value);
                 const isPublished = s === "published";
@@ -808,7 +571,6 @@ export const Playground: StoryObj<PlaygroundArgs> = {
             {
               field: "published_at",
               label: "Published",
-              filter: { type: "date" },
               render: (value) => {
                 if (!value)
                   return <span className="text-zinc-400 text-xs">—</span>;
