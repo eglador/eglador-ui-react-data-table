@@ -11,7 +11,6 @@ import {
   ChevronsUpDownIcon,
   GripVerticalIcon,
   InboxIcon,
-  LoaderIcon,
   MinusIcon,
 } from "../icons";
 import type {
@@ -23,13 +22,9 @@ import type {
   RowId,
 } from "../types";
 
-// === Container =====================================================
-
 export interface DataTableContainerProps
   extends React.HTMLAttributes<HTMLDivElement> {
-  /** Make the header sticky at the top of the scrolling container. Default `true`. */
   stickyHeader?: boolean;
-  /** Container max height — enables vertical scroll. */
   maxHeight?: number | string;
 }
 
@@ -48,8 +43,6 @@ export const DataTableContainer = React.forwardRef<
       style={{ maxHeight, ...style }}
       className={cn(
         "relative w-full rounded-sm border border-zinc-200 bg-white",
-        // Horizontal scroll is always available so wide tables don't clip.
-        // Vertical scroll is opt-in via `maxHeight`.
         maxHeight ? "overflow-auto" : "overflow-x-auto",
         className,
       )}
@@ -60,8 +53,6 @@ export const DataTableContainer = React.forwardRef<
   );
 });
 DataTableContainer.displayName = "DataTable.Container";
-
-// === Table =========================================================
 
 export interface DataTableTableProps
   extends React.TableHTMLAttributes<HTMLTableElement> {}
@@ -85,8 +76,6 @@ export const DataTableTable = React.forwardRef<
   );
 });
 DataTableTable.displayName = "DataTable.Table";
-
-// === Header ========================================================
 
 export interface DataTableHeaderProps
   extends React.HTMLAttributes<HTMLTableSectionElement> {}
@@ -119,8 +108,6 @@ export const DataTableHeader = React.forwardRef<
 });
 DataTableHeader.displayName = "DataTable.Header";
 
-// === Footer (optional mirror of the header) ========================
-
 export interface DataTableFooterProps
   extends React.HTMLAttributes<HTMLTableSectionElement> {}
 
@@ -152,8 +139,6 @@ export const DataTableFooter = React.forwardRef<
 });
 DataTableFooter.displayName = "DataTable.Footer";
 
-// === Header cell ===================================================
-
 export interface DataTableHeaderCellProps
   extends React.ThHTMLAttributes<HTMLTableCellElement> {
   column: ColumnDef<unknown>;
@@ -173,7 +158,6 @@ export const DataTableHeaderCell = React.forwardRef<
   const align = (column as { align?: "left" | "center" | "right" }).align ?? "left";
   const sticky = (column as { sticky?: "left" | "right" }).sticky;
   const headerCls = (column as { headerClassName?: string }).headerClassName;
-
   if (column.type === "select") {
     const customHeader = (column as { header?: React.ReactNode }).header;
     return (
@@ -195,7 +179,6 @@ export const DataTableHeaderCell = React.forwardRef<
       </th>
     );
   }
-
   if (column.type === "drag" || column.type === "expander") {
     const customHeader = (column as { header?: React.ReactNode }).header;
     return (
@@ -224,7 +207,6 @@ export const DataTableHeaderCell = React.forwardRef<
       </th>
     );
   }
-
   if (column.type === "actions") {
     const customHeader = (column as { header?: React.ReactNode }).header;
     return (
@@ -247,13 +229,10 @@ export const DataTableHeaderCell = React.forwardRef<
       </th>
     );
   }
-
-  // Data column
   const dataCol = column as DataColumnDef<unknown>;
   const sortKey = dataCol.sortKey ?? column.id;
   const sortable = dataCol.sortable !== false && dataCol.sortable;
   const sortInfo = sortable ? table.sorting.get(sortKey) : null;
-
   const ctx: HeaderContext<unknown> = {
     column,
     sort: {
@@ -262,18 +241,15 @@ export const DataTableHeaderCell = React.forwardRef<
       toggle: (multi) => table.sorting.toggle(sortKey, multi),
     },
   };
-
   const headerNode =
     typeof dataCol.header === "function"
       ? dataCol.header(ctx)
       : (dataCol.header ?? column.id);
-
   const onSortClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     if (!sortable) return;
     const multi = e.shiftKey || e.metaKey || e.ctrlKey;
     table.sorting.toggle(sortKey, multi);
   };
-
   return (
     <th
       ref={ref}
@@ -331,17 +307,12 @@ export const DataTableHeaderCell = React.forwardRef<
 });
 DataTableHeaderCell.displayName = "DataTable.HeaderCell";
 
-// === Body ==========================================================
-
 export interface DataTableBodyProps
   extends React.HTMLAttributes<HTMLTableSectionElement> {
-  /** Override the default empty state. */
   emptyState?:
     | React.ReactNode
     | ((ctx: { search: string; hasFilters: boolean }) => React.ReactNode);
-  /** Override the default loading skeleton. */
   loadingState?: React.ReactNode;
-  /** Override the default error state. */
   errorState?:
     | React.ReactNode
     | ((error: unknown, retry: () => void) => React.ReactNode);
@@ -360,7 +331,6 @@ export const DataTableBody = React.forwardRef<
   const isError = status === "error" && table.rows.length === 0;
   const isEmpty = status === "success" && table.rows.length === 0;
   const colSpan = table.visibleColumns.length || 1;
-
   return (
     <tbody
       ref={ref}
@@ -420,8 +390,6 @@ export const DataTableBody = React.forwardRef<
 });
 DataTableBody.displayName = "DataTable.Body";
 
-// === Row ===========================================================
-
 export interface DataTableRowProps<TData = unknown>
   extends Omit<React.HTMLAttributes<HTMLTableRowElement>, "children"> {
   row: TData;
@@ -461,8 +429,6 @@ export const DataTableRow = React.forwardRef<
 });
 DataTableRow.displayName = "DataTable.Row";
 
-// === Cell ==========================================================
-
 export interface DataTableCellProps<TData = unknown>
   extends Omit<React.TdHTMLAttributes<HTMLTableCellElement>, "children"> {
   column: ColumnDef<TData>;
@@ -490,17 +456,15 @@ export const DataTableCell = React.forwardRef<
       : density === "spacious"
         ? "px-3 py-4"
         : "px-3 py-2.5";
-
   const baseClasses = cn(
     "align-middle text-zinc-700 whitespace-nowrap",
     "border-b border-zinc-200",
     align === "center" && "text-center",
     align === "right" && "text-right",
-    sticky && stickyClasses(sticky, true),
+    sticky && stickyClasses(sticky),
     cellCls,
     className,
   );
-
   if (column.type === "select") {
     return (
       <td
@@ -515,7 +479,6 @@ export const DataTableCell = React.forwardRef<
       </td>
     );
   }
-
   if (column.type === "drag") {
     return (
       <td
@@ -536,7 +499,6 @@ export const DataTableCell = React.forwardRef<
       </td>
     );
   }
-
   if (column.type === "expander") {
     return (
       <td
@@ -551,7 +513,6 @@ export const DataTableCell = React.forwardRef<
       </td>
     );
   }
-
   if (column.type === "actions") {
     const actionsCol = column as ActionsColumnDef<unknown>;
     const ctx: CellContext<unknown> = {
@@ -574,8 +535,6 @@ export const DataTableCell = React.forwardRef<
       </td>
     );
   }
-
-  // Data column
   const dataCol = column as DataColumnDef<unknown>;
   const value = extractValue(row, dataCol);
   const ctx: CellContext<unknown> = {
@@ -586,7 +545,6 @@ export const DataTableCell = React.forwardRef<
     column,
   };
   const cellNode = dataCol.cell ? dataCol.cell(ctx) : (value as React.ReactNode);
-
   return (
     <td
       ref={ref}
@@ -600,8 +558,6 @@ export const DataTableCell = React.forwardRef<
   );
 });
 DataTableCell.displayName = "DataTable.Cell";
-
-// === Empty / Loading / Error =======================================
 
 export interface DataTableEmptyProps
   extends Omit<React.HTMLAttributes<HTMLDivElement>, "title"> {
@@ -722,8 +678,6 @@ export const DataTableLoading = React.forwardRef<
 });
 DataTableLoading.displayName = "DataTable.Loading";
 
-// === Internal helpers (full-width tbody rows) ======================
-
 function DataTableLoadingRow({ colSpan }: { colSpan: number }) {
   return (
     <>
@@ -738,20 +692,15 @@ function DataTableLoadingRow({ colSpan }: { colSpan: number }) {
   );
 }
 
-// === Selection helpers =============================================
-
 function SelectAllCheckbox() {
   const table = useDataTableContext();
   const ref = React.useRef<HTMLInputElement>(null);
-
   React.useEffect(() => {
     if (ref.current) {
       ref.current.indeterminate = table.selection.isSomeSelected;
     }
   }, [table.selection.isSomeSelected]);
-
   if (table.selection.mode !== "multiple") return null;
-
   return (
     <label className="inline-flex items-center justify-center cursor-pointer">
       <input
@@ -813,9 +762,7 @@ function RowSelectCheckbox({ rowId }: { rowId: RowId }) {
   );
 }
 
-// === Misc helpers ==================================================
-
-function stickyClasses(side: "left" | "right", _isCell = false): string {
+function stickyClasses(side: "left" | "right"): string {
   if (side === "left") return "sticky left-0 bg-white z-[1]";
   return "sticky right-0 bg-white z-[1]";
 }
@@ -827,7 +774,3 @@ function extractValue<TData>(row: TData, column: DataColumnDef<TData>): unknown 
   }
   return undefined;
 }
-
-// Used by Body's loading shimmer fallback path. Suppress unused warning when
-// Loading isn't directly imported elsewhere in this module.
-void LoaderIcon;

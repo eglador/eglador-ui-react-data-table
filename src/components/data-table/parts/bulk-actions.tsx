@@ -7,10 +7,7 @@ import { XIcon } from "../icons";
 
 export interface DataTableBulkActionsProps
   extends React.HTMLAttributes<HTMLDivElement> {
-  /** Hide the bar entirely when nothing is selected. Default `true`. */
   hideWhenEmpty?: boolean;
-  /** Custom selection count label. Receives the count and whether the
-   *  "select all matching rows" mode is active. */
   label?: (count: number, isAll: boolean) => React.ReactNode;
 }
 
@@ -24,11 +21,9 @@ export function DataTableBulkActions({
   const table = useDataTableContext();
   const count = table.selection.selectedCount;
   if (hideWhenEmpty && count === 0) return null;
-
   const defaultLabel = label
     ? label(count, table.selection.state.all)
     : `${count} selected`;
-
   return (
     <div
       data-data-table-bulk-actions=""

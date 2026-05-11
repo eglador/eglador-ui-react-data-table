@@ -11,25 +11,14 @@ import type {
 } from "./types";
 
 export interface UseAutoColumnsOptions<TData> {
-  /** Discovered field list (typically `Object.keys(firstRow)`). When empty
-   *  the table still renders any `addColumns`. */
   fields: string[];
-  /** Whitelist of field ids; if provided, only these are shown, in this order. */
   visibleColumns?: string[];
-  /** Blacklist of field ids; ignored when `visibleColumns` is provided. */
   hideColumns?: string[];
-  /** Per-column overrides matched by `field`. */
   customColumns?: CustomColumnDef<TData>[];
-  /** Extra columns not present in the response (select, actions, …). */
   addColumns?: AddedColumnDef<TData>[];
-  /** Default sort-enable for every discovered column. Per-column override
-   *  via `customColumns[].sortable`. */
   sortable?: boolean;
-  /** Whitelist of column ids that may be sorted server-side. */
   allowedSorts?: string[];
-  /** Whitelist of column ids that may be filtered. */
   allowedFilters?: string[];
-  /** Forwarded to render callbacks. */
   refresh: () => void;
 }
 
@@ -39,7 +28,6 @@ export function useAutoColumns<TData>(
   return React.useMemo(() => {
     const visible = options.visibleColumns;
     const hide = options.hideColumns;
-
     const discovered = options.fields;
     let fields: string[];
     if (visible && visible.length > 0) {
@@ -51,19 +39,16 @@ export function useAutoColumns<TData>(
     } else {
       fields = [];
     }
-
     const customMap = new Map<string, CustomColumnDef<TData>>();
     for (const c of options.customColumns ?? []) {
       customMap.set(c.field, c);
     }
-
     const sortAllow = options.allowedSorts
       ? new Set(options.allowedSorts)
       : null;
     const filterAllow = options.allowedFilters
       ? new Set(options.allowedFilters)
       : null;
-
     const cols: ColumnDef<TData>[] = fields.map((field) => {
       const custom = customMap.get(field);
       return buildDataColumn<TData>(
@@ -75,7 +60,6 @@ export function useAutoColumns<TData>(
         options.refresh,
       );
     });
-
     for (const add of options.addColumns ?? []) {
       const col = buildAddedColumn<TData>(add, options.refresh);
       if (add.position === "start") {
@@ -87,7 +71,6 @@ export function useAutoColumns<TData>(
         cols.push(col);
       }
     }
-
     return cols;
   }, [
     options.fields,
@@ -112,17 +95,14 @@ function buildDataColumn<TData>(
 ): DataColumnDef<TData> {
   const sortKey = custom?.sortKey ?? field;
   const filterKey = custom?.filterKey ?? field;
-
   const sortableInherited =
     defaultSortable && (sortAllow ? sortAllow.has(sortKey) : true);
   const sortable =
     custom?.sortable !== undefined ? custom.sortable : sortableInherited;
-
   const filterPermitted =
     !filterAllow || filterAllow.has(filterKey);
   const filterableInherited = custom?.filterable !== false && filterPermitted;
   const filter = filterableInherited ? custom?.filter : undefined;
-
   const col: DataColumnDef<TData> = {
     id: field,
     type: "data",
@@ -143,13 +123,11 @@ function buildDataColumn<TData>(
     headerClassName: custom?.headerClassName,
     cellClassName: custom?.cellClassName,
   };
-
   if (custom?.accessor) {
     col.accessorFn = custom.accessor;
   } else {
     col.accessorKey = field as keyof TData & string;
   }
-
   if (custom?.render) {
     const userRender = custom.render;
     col.cell = (ctx: CellContext<TData>) =>
@@ -159,7 +137,6 @@ function buildDataColumn<TData>(
         refresh,
       });
   }
-
   return col;
 }
 
@@ -168,7 +145,6 @@ function buildAddedColumn<TData>(
   refresh: () => void,
 ): ColumnDef<TData> {
   const type = add.type ?? "data";
-
   if (type === "select") {
     return {
       id: add.field,
@@ -184,7 +160,6 @@ function buildAddedColumn<TData>(
       cellClassName: add.cellClassName,
     };
   }
-
   if (type === "drag") {
     return {
       id: add.field,
@@ -194,7 +169,6 @@ function buildAddedColumn<TData>(
       sticky: add.sticky,
     };
   }
-
   if (type === "expander") {
     return {
       id: add.field,
@@ -203,7 +177,6 @@ function buildAddedColumn<TData>(
       width: add.width,
     };
   }
-
   if (type === "actions") {
     return {
       id: add.field,
@@ -219,8 +192,6 @@ function buildAddedColumn<TData>(
           : null,
     };
   }
-
-  // Plain `"data"` extra column — computed cells.
   const col: DataColumnDef<TData> = {
     id: add.field,
     type: "data",

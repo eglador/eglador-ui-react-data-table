@@ -1,5 +1,4 @@
 import type {
-  FilterValue,
   SortValue,
   TableQueryState,
 } from "../components/data-table/types";
@@ -84,13 +83,4 @@ export function valueToParam(value: unknown): string {
   if (value instanceof Date) return value.toISOString();
   if (value == null) return "";
   return String(value);
-}
-
-export function isUnaryOperator(op: FilterValue["operator"]): boolean {
-  return (
-    op === "is_null" ||
-    op === "is_not_null" ||
-    op === "is_true" ||
-    op === "is_false"
-  );
 }
