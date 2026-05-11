@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import type { QueryAction } from "./state";
+import { DEFAULT_PAGE_SIZE, genFilterId, type QueryAction } from "./state";
 import type {
   FilterValue,
   PaginationValue,
@@ -11,39 +11,26 @@ import type {
 } from "./types";
 
 export interface UrlSyncOptions {
-  /** Prefix for every search-param to keep multiple tables on the same page
-   *  isolated (e.g. `users_page`, `posts_page`). */
   paramPrefix?: string;
-  /** Read the initial URL on mount and seed `initialState` from it. */
   readOnMount?: boolean;
-  /** Replace history entry instead of pushing a new one. Default `true`. */
   replace?: boolean;
 }
 
 export interface UrlSyncReturn {
-  /** Pass to `useDataTable({ initialState })`. */
   initialState: Partial<TableQueryState>;
-  /** Pass to `useDataTable({ onStateChange })` so URL stays in sync. */
   onStateChange: (state: TableQueryState, action: QueryAction) => void;
 }
 
-const DEFAULT_PAGE_SIZE = 25;
-
-/** URL ↔ table state sync. Framework-agnostic — uses the History API
- *  directly, so it works with Next.js App Router, Pages Router, React Router,
- *  Remix, Vite, anywhere there's a `window`. */
 export function useUrlSyncedState(
   options: UrlSyncOptions = {},
 ): UrlSyncReturn {
   const { paramPrefix = "", replace = true } = options;
   const readOnMount = options.readOnMount ?? true;
-
   const initialState = React.useMemo<Partial<TableQueryState>>(() => {
     if (!readOnMount) return {};
     if (typeof window === "undefined") return {};
     return parseQueryFromUrl(window.location.search, paramPrefix);
   }, [paramPrefix, readOnMount]);
-
   const onStateChange = React.useCallback(
     (state: TableQueryState) => {
       if (typeof window === "undefined") return;
@@ -60,11 +47,8 @@ export function useUrlSyncedState(
     },
     [paramPrefix, replace],
   );
-
   return { initialState, onStateChange };
 }
-
-// === Encode ========================================================
 
 export function writeQueryToUrl(
   sp: URLSearchParams,
@@ -72,8 +56,6 @@ export function writeQueryToUrl(
   prefix = "",
 ): void {
   const k = (name: string) => `${prefix}${name}`;
-
-  // Strip out keys we own first.
   const owned = [
     "page",
     "pageSize",
@@ -85,8 +67,6 @@ export function writeQueryToUrl(
     "include",
   ].map(k);
   for (const key of owned) sp.delete(key);
-
-  // Pagination
   if (state.pagination.mode === "offset") {
     if (state.pagination.page !== 1) {
       sp.set(k("page"), String(state.pagination.page));
@@ -103,8 +83,6 @@ export function writeQueryToUrl(
       sp.set(k("pageSize"), String(state.pagination.pageSize));
     }
   }
-
-  // Sort: -name,createdAt
   if (state.sorting.length > 0) {
     sp.set(
       k("sort"),
@@ -113,18 +91,12 @@ export function writeQueryToUrl(
         .join(","),
     );
   }
-
-  // Search
   if (state.search.trim()) {
     sp.set(k("q"), state.search);
   }
-
-  // Includes
   if (state.includes.length > 0) {
     sp.set(k("include"), state.includes.join(","));
   }
-
-  // Filters: serialized as `column:operator:value` pipe-delimited.
   if (state.filters.length > 0) {
     sp.set(
       k("filters"),
@@ -133,8 +105,6 @@ export function writeQueryToUrl(
   }
 }
 
-// === Decode ========================================================
-
 export function parseQueryFromUrl(
   search: string,
   prefix = "",
@@ -142,12 +112,10 @@ export function parseQueryFromUrl(
   const sp = new URLSearchParams(search);
   const k = (name: string) => `${prefix}${name}`;
   const out: Partial<TableQueryState> = {};
-
   const cursor = sp.get(k("cursor"));
   const cursorDir = sp.get(k("cursorDir"));
   const pageSizeRaw = sp.get(k("pageSize"));
   const pageSize = pageSizeRaw ? Number(pageSizeRaw) : DEFAULT_PAGE_SIZE;
-
   if (cursor != null) {
     const pagination: PaginationValue = {
       mode: "cursor",
@@ -165,7 +133,6 @@ export function parseQueryFromUrl(
     };
     out.pagination = pagination;
   }
-
   const sortRaw = sp.get(k("sort"));
   if (sortRaw) {
     const sorting: SortValue[] = sortRaw
@@ -180,15 +147,12 @@ export function parseQueryFromUrl(
       });
     out.sorting = sorting;
   }
-
   const search_ = sp.get(k("q"));
   if (search_ != null) out.search = search_;
-
   const includesRaw = sp.get(k("include"));
   if (includesRaw) {
     out.includes = includesRaw.split(",").map((s) => s.trim()).filter(Boolean);
   }
-
   const filtersRaw = sp.get(k("filters"));
   if (filtersRaw) {
     out.filters = filtersRaw
@@ -196,7 +160,6 @@ export function parseQueryFromUrl(
       .map(parseFilter)
       .filter((f): f is FilterValue => f != null);
   }
-
   return out;
 }
 
@@ -212,7 +175,7 @@ function parseFilter(raw: string): FilterValue | null {
   const operator = parts[1] as FilterValue["operator"];
   const valueRaw = parts.slice(2).join(":");
   return {
-    id: cryptoId(),
+    id: genFilterId(),
     column,
     operator,
     value: decodeFilterValue(valueRaw),
@@ -234,16 +197,4 @@ function decodeFilterValue(raw: string): unknown {
     return raw.split(",").map(decodeURIComponent);
   }
   return decodeURIComponent(raw);
-}
-
-let counter = 0;
-function cryptoId(): string {
-  counter += 1;
-  if (
-    typeof globalThis !== "undefined" &&
-    typeof (globalThis as { crypto?: Crypto }).crypto?.randomUUID === "function"
-  ) {
-    return (globalThis as { crypto: Crypto }).crypto.randomUUID();
-  }
-  return `f-${Date.now().toString(36)}-${counter.toString(36)}`;
 }

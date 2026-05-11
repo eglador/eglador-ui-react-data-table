@@ -88,8 +88,6 @@ function allowedOperatorsFor(config: ColumnFilterConfig): FilterOperator[] {
   return OPERATORS_BY_TYPE[config.type] ?? ["eq"];
 }
 
-// === Filter Bar ====================================================
-
 export interface DataTableFilterBarProps
   extends React.HTMLAttributes<HTMLDivElement> {}
 
@@ -100,7 +98,6 @@ export function DataTableFilterBar({
   const table = useDataTableContext();
   const filterableColumns = getFilterableColumns(table.columns);
   if (filterableColumns.length === 0) return null;
-
   return (
     <div
       data-data-table-filter-bar=""
@@ -128,8 +125,6 @@ export function DataTableFilterBar({
 }
 DataTableFilterBar.displayName = "DataTable.FilterBar";
 
-// === Filter chip ===================================================
-
 function FilterChip({ filter }: { filter: FilterValue }) {
   const table = useDataTableContext();
   const column = table.columns.find(
@@ -142,7 +137,6 @@ function FilterChip({ filter }: { filter: FilterValue }) {
     typeof column?.header === "string"
       ? (column.header as string)
       : (filter.column);
-
   return (
     <Popover
       align="start"
@@ -196,14 +190,11 @@ function FilterChip({ filter }: { filter: FilterValue }) {
   );
 }
 
-// === Add filter ====================================================
-
 export function DataTableAddFilter() {
   const table = useDataTableContext();
   const filterableColumns = getFilterableColumns(table.columns);
   const [pickedColumn, setPickedColumn] =
     React.useState<DataColumnDef<unknown> | null>(null);
-
   return (
     <Popover
       align="start"
@@ -281,8 +272,6 @@ export function DataTableAddFilter() {
 }
 DataTableAddFilter.displayName = "DataTable.AddFilter";
 
-// === Filter Editor (operator + value) ==============================
-
 interface FilterEditorProps {
   column: DataColumnDef<unknown>;
   filter: FilterValue | null;
@@ -297,17 +286,14 @@ function FilterEditor({ column, filter, onSave, onCancel }: FilterEditorProps) {
     filter?.operator ?? defaultOperatorFor(config),
   );
   const [value, setValue] = React.useState<unknown>(filter?.value ?? defaultValueFor(config, operator));
-
   const onOperatorChange = (op: FilterOperator) => {
     setOperator(op);
     if (op !== operator) {
       setValue(defaultValueFor(config, op));
     }
   };
-
   const headerLabel =
     typeof column.header === "string" ? (column.header as string) : column.id;
-
   return (
     <div className="flex flex-col gap-2">
       <div className="text-xs font-medium text-zinc-700">{headerLabel}</div>
@@ -353,8 +339,6 @@ function FilterEditor({ column, filter, onSave, onCancel }: FilterEditorProps) {
   );
 }
 
-// === Per-type value input ==========================================
-
 function FilterValueInput({
   config,
   operator,
@@ -377,7 +361,6 @@ function FilterValueInput({
       />
     );
   }
-
   if (config.type === "number") {
     if (operator === "between") {
       const [min, max] = Array.isArray(value)
@@ -422,7 +405,6 @@ function FilterValueInput({
       />
     );
   }
-
   if (config.type === "date") {
     if (operator === "between") {
       const [min, max] = Array.isArray(value)
@@ -455,7 +437,6 @@ function FilterValueInput({
       />
     );
   }
-
   if (config.type === "select" || config.type === "multi-select") {
     return (
       <SelectFilterInput
@@ -466,11 +447,9 @@ function FilterValueInput({
       />
     );
   }
-
   if (config.type === "boolean") {
     return null;
   }
-
   if (config.type === "custom") {
     return (
       <>
@@ -483,7 +462,6 @@ function FilterValueInput({
       </>
     );
   }
-
   return null;
 }
 
@@ -501,7 +479,6 @@ function SelectFilterInput({
   const [options, setOptions] = React.useState<FilterOption[]>(() =>
     Array.isArray(config.options) ? config.options : [],
   );
-
   React.useEffect(() => {
     if (Array.isArray(config.options)) {
       setOptions(config.options);
@@ -515,10 +492,8 @@ function SelectFilterInput({
       cancelled = true;
     };
   }, [config.options]);
-
   const isMulti =
     config.type === "multi-select" || operator === "in" || operator === "not_in";
-
   if (isMulti) {
     const arr = Array.isArray(value) ? (value as (string | number | boolean)[]) : [];
     return (
@@ -548,7 +523,6 @@ function SelectFilterInput({
       </div>
     );
   }
-
   return (
     <select
       value={(value as string | number) ?? ""}
@@ -564,8 +538,6 @@ function SelectFilterInput({
     </select>
   );
 }
-
-// === Helpers =======================================================
 
 function isUnaryOperator(op: FilterOperator): boolean {
   return op === "is_null" || op === "is_not_null" || op === "is_true" || op === "is_false";

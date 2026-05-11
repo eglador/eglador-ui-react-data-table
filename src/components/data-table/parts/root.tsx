@@ -8,7 +8,6 @@ import type { DataTableInstance } from "../use-data-table";
 
 export interface DataTableRootProps
   extends React.HTMLAttributes<HTMLDivElement> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   table: DataTableInstance<any>;
   children?: React.ReactNode;
 }

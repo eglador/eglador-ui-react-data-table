@@ -16,8 +16,6 @@ import {
 import { Popover } from "./popover";
 import type { TableDensity } from "../types";
 
-// === Toolbar (container) ===========================================
-
 export interface DataTableToolbarProps
   extends React.HTMLAttributes<HTMLDivElement> {}
 
@@ -38,8 +36,6 @@ export const DataTableToolbar = React.forwardRef<
 });
 DataTableToolbar.displayName = "DataTable.Toolbar";
 
-// === Search ========================================================
-
 export interface DataTableSearchProps
   extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange"> {
   placeholder?: string;
@@ -55,20 +51,16 @@ export const DataTableSearch = React.forwardRef<
 ) {
   const table = useDataTableContext();
   const [local, setLocal] = React.useState(table.search.value);
-
   React.useEffect(() => {
     setLocal(table.search.value);
   }, [table.search.value]);
-
   React.useEffect(() => {
     if (local === table.search.value) return;
     const id = window.setTimeout(() => {
       table.search.set(local);
     }, debounceMs);
     return () => window.clearTimeout(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [local, debounceMs]);
-
   return (
     <div
       data-data-table-search=""
@@ -112,8 +104,6 @@ export const DataTableSearch = React.forwardRef<
 });
 DataTableSearch.displayName = "DataTable.Search";
 
-// === Refresh ========================================================
-
 export interface DataTableRefreshButtonProps
   extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "type"> {}
 
@@ -154,8 +144,6 @@ export const DataTableRefreshButton = React.forwardRef<
   );
 });
 DataTableRefreshButton.displayName = "DataTable.RefreshButton";
-
-// === Density toggle =================================================
 
 const DENSITY_OPTIONS: {
   value: TableDensity;
@@ -228,11 +216,8 @@ export const DataTableDensityToggle = React.forwardRef<
 });
 DataTableDensityToggle.displayName = "DataTable.DensityToggle";
 
-// === Column visibility menu =========================================
-
 export interface DataTableColumnVisibilityMenuProps
   extends Omit<React.HTMLAttributes<HTMLDivElement>, "children"> {
-  /** Trigger label / element. Defaults to the eye icon. */
   trigger?: React.ReactNode;
 }
 
@@ -252,7 +237,6 @@ export const DataTableColumnVisibilityMenu = React.forwardRef<
       c.type !== "expander" &&
       (c as { hideable?: boolean }).hideable !== false,
   );
-
   return (
     <Popover
       align="end"

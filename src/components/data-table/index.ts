@@ -23,10 +23,6 @@ import {
 } from "./parts";
 import { DataTableSchema } from "./DataTableSchema";
 
-/** The primary `<DataTable>` is schema-driven (auto-discovers columns,
- *  wires the toolbar/filters/pagination from props). For lower-level
- *  control the compound parts are available under the same namespace —
- *  `<DataTable.Root table={...}>` + `<DataTable.Body />` etc. */
 export const DataTable = Object.assign(DataTableSchema, {
   Root: DataTableRoot,
   Toolbar: DataTableToolbar,

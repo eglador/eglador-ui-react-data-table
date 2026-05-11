@@ -18,7 +18,6 @@ import type {
   RequestConfig,
   RequestState,
   RowId,
-  SearchConfig,
   SelectionMode,
   SelectionState,
   SortDirection,
@@ -30,12 +29,8 @@ import type {
 export interface UseDataTableOptions<TData> {
   source: DataSource<TData>;
   columns: ColumnDef<TData>[];
-  /** How to compute a stable id for each row. Defaults to `row.id`. */
   getRowId?: GetRowId<TData>;
-  /** Initial / default query state. Each field is optional. */
   initialState?: Partial<TableQueryState>;
-  /** Controlled state — when provided, the hook stays in sync with `state` /
-   *  `onStateChange` instead of owning its own copy. */
   state?: TableQueryState;
   onStateChange?: (next: TableQueryState, action: QueryAction) => void;
   request?: RequestConfig;
@@ -46,33 +41,22 @@ export interface UseDataTableOptions<TData> {
   };
   density?: TableDensity;
   onDensityChange?: (density: TableDensity) => void;
-  /** Default `true`: server-side sort/filter/search are decided based on the
-   *  source's `capabilities`. Set `false` to force everything client-side. */
-  serverMode?: boolean;
-  search?: SearchConfig;
   mutations?: DataMutations<TData>;
 }
 
 export interface DataTableInstance<TData> {
-  // === Query state ===
   state: TableQueryState;
   dispatch: (action: QueryAction) => void;
-
-  // === Data + lifecycle ===
   rows: TData[];
   total: number | null;
   pageInfo: PageInfo | null;
   request: RequestState<TData>;
   refresh: () => void;
-
-  // === Columns (resolved + visible) ===
   columns: ColumnDef<TData>[];
   visibleColumns: ColumnDef<TData>[];
   setColumnVisibility: (columnId: string, visible: boolean) => void;
   toggleColumnVisibility: (columnId: string) => void;
   isColumnVisible: (columnId: string) => boolean;
-
-  // === Pagination ===
   pagination: {
     value: PaginationValue;
     page: number;
@@ -86,8 +70,6 @@ export interface DataTableInstance<TData> {
     previousPage: () => void;
     setCursor: (cursor: string | null) => void;
   };
-
-  // === Sorting ===
   sorting: {
     value: SortValue[];
     toggle: (column: string, multi?: boolean) => void;
@@ -95,8 +77,6 @@ export interface DataTableInstance<TData> {
     clear: () => void;
     get: (column: string) => { direction: SortDirection; index: number } | null;
   };
-
-  // === Filters ===
   filters: {
     value: FilterValue[];
     add: (filter: Omit<FilterValue, "id"> & { id?: string }) => void;
@@ -105,18 +85,12 @@ export interface DataTableInstance<TData> {
     set: (filters: FilterValue[]) => void;
     clear: () => void;
   };
-
-  // === Search ===
   search: {
     value: string;
     set: (value: string) => void;
   };
-
-  // === Density ===
   density: TableDensity;
   setDensity: (density: TableDensity) => void;
-
-  // === Selection ===
   selection: {
     mode: SelectionMode;
     state: SelectionState;
@@ -129,11 +103,7 @@ export interface DataTableInstance<TData> {
     selectedRows: TData[];
     selectedCount: number;
   };
-
-  // === Row identity ===
   getRowId: GetRowId<TData>;
-
-  // === Mutations ===
   mutations: DataMutations<TData> | undefined;
 }
 
@@ -162,11 +132,8 @@ export function useDataTable<TData>(
     selection: selectionOpts,
     density: controlledDensity,
     onDensityChange,
-    search: searchConfig,
     mutations,
   } = options;
-
-  // === Query state ===
   const [internalState, dispatchInternal] = React.useReducer(
     queryReducer,
     initialState,
@@ -174,7 +141,6 @@ export function useDataTable<TData>(
   );
   const stateIsControlled = controlledState != null;
   const state = stateIsControlled ? controlledState : internalState;
-
   const dispatch = React.useCallback(
     (action: QueryAction) => {
       if (stateIsControlled) {
@@ -190,19 +156,14 @@ export function useDataTable<TData>(
     },
     [stateIsControlled, state, onStateChange],
   );
-
-  // === Fetch ===
   const { status, data, error, isFetching, refresh } = useDataSource(
     source,
     state,
     request,
   );
-
   const rows = data?.rows ?? [];
   const total = data?.total ?? null;
   const pageInfo = data?.pageInfo ?? null;
-
-  // === Column visibility ===
   const [hiddenColumns, setHiddenColumns] = React.useState<Set<string>>(() => {
     const initial = new Set<string>();
     for (const col of rawColumns) {
@@ -212,7 +173,6 @@ export function useDataTable<TData>(
     }
     return initial;
   });
-
   const setColumnVisibility = React.useCallback(
     (columnId: string, visible: boolean) => {
       setHiddenColumns((prev) => {
@@ -224,7 +184,6 @@ export function useDataTable<TData>(
     },
     [],
   );
-
   const toggleColumnVisibility = React.useCallback((columnId: string) => {
     setHiddenColumns((prev) => {
       const next = new Set(prev);
@@ -233,18 +192,14 @@ export function useDataTable<TData>(
       return next;
     });
   }, []);
-
   const isColumnVisible = React.useCallback(
     (columnId: string) => !hiddenColumns.has(columnId),
     [hiddenColumns],
   );
-
   const visibleColumns = React.useMemo(
     () => rawColumns.filter((col) => !hiddenColumns.has(col.id)),
     [rawColumns, hiddenColumns],
   );
-
-  // === Density ===
   const [internalDensity, setInternalDensity] = React.useState<TableDensity>(
     "comfortable",
   );
@@ -259,8 +214,6 @@ export function useDataTable<TData>(
     },
     [controlledDensity, onDensityChange],
   );
-
-  // === Selection ===
   const selectionMode = selectionOpts?.mode ?? "none";
   const [internalSelection, setInternalSelection] =
     React.useState<SelectionState>(() => cloneSelection(EMPTY_SELECTION));
@@ -268,7 +221,6 @@ export function useDataTable<TData>(
   const selectionState = selectionIsControlled
     ? selectionOpts!.state!
     : internalSelection;
-
   const updateSelection = React.useCallback(
     (next: SelectionState) => {
       if (selectionIsControlled) {
@@ -280,12 +232,10 @@ export function useDataTable<TData>(
     },
     [selectionIsControlled, selectionOpts],
   );
-
   const rowIds = React.useMemo(
     () => rows.map((row, i) => getRowId(row, i)),
     [rows, getRowId],
   );
-
   const isSelected = React.useCallback(
     (rowId: RowId) => {
       if (selectionState.all) return !selectionState.excluded.has(rowId);
@@ -293,17 +243,14 @@ export function useDataTable<TData>(
     },
     [selectionState],
   );
-
   const isAllSelected =
     rowIds.length > 0 && rowIds.every((id) => isSelected(id));
   const isSomeSelected =
     !isAllSelected && rowIds.some((id) => isSelected(id));
-
   const toggleRow = React.useCallback(
     (rowId: RowId) => {
       if (selectionMode === "none") return;
       const next = cloneSelection(selectionState);
-
       if (selectionMode === "single") {
         const wasOnly =
           next.selected.size === 1 && next.selected.has(rowId) && !next.all;
@@ -314,7 +261,6 @@ export function useDataTable<TData>(
         updateSelection(next);
         return;
       }
-
       if (next.all) {
         if (next.excluded.has(rowId)) next.excluded.delete(rowId);
         else next.excluded.add(rowId);
@@ -326,7 +272,6 @@ export function useDataTable<TData>(
     },
     [selectionMode, selectionState, updateSelection],
   );
-
   const toggleAllRows = React.useCallback(() => {
     if (selectionMode !== "multiple") return;
     const next = cloneSelection(selectionState);
@@ -343,25 +288,17 @@ export function useDataTable<TData>(
     }
     updateSelection(next);
   }, [selectionMode, selectionState, isAllSelected, rowIds, updateSelection]);
-
   const clearSelection = React.useCallback(() => {
     updateSelection(cloneSelection(EMPTY_SELECTION));
   }, [updateSelection]);
-
   const selectedRows = React.useMemo(
     () => rows.filter((row, i) => isSelected(getRowId(row, i))),
     [rows, getRowId, isSelected],
   );
-
   const selectedCount = selectionState.all
     ? Math.max((total ?? rows.length) - selectionState.excluded.size, 0)
     : selectionState.selected.size;
-
-  // === Pagination derived ===
-  const pageSize =
-    state.pagination.mode === "offset"
-      ? state.pagination.pageSize
-      : state.pagination.pageSize;
+  const pageSize = state.pagination.pageSize;
   const page = state.pagination.mode === "offset" ? state.pagination.page : 1;
   const pageCount =
     total != null && pageSize > 0 ? Math.max(1, Math.ceil(total / pageSize)) : 0;
@@ -375,8 +312,6 @@ export function useDataTable<TData>(
         ? rows.length === pageSize
         : state.pagination.page < pageCount
       : pageInfo?.hasNextPage ?? false;
-
-  // === Sorting helpers ===
   const sortingGet = React.useCallback(
     (column: string) => {
       const idx = state.sorting.findIndex((s) => s.column === column);
@@ -385,23 +320,19 @@ export function useDataTable<TData>(
     },
     [state.sorting],
   );
-
   return {
     state,
     dispatch,
-
     rows,
     total,
     pageInfo,
     request: { status, data, error, isFetching },
     refresh,
-
     columns: rawColumns,
     visibleColumns,
     setColumnVisibility,
     toggleColumnVisibility,
     isColumnVisible,
-
     pagination: {
       value: state.pagination,
       page,
@@ -433,7 +364,6 @@ export function useDataTable<TData>(
             : undefined,
       setCursor: (cursor) => dispatch({ type: "set-cursor", cursor }),
     },
-
     sorting: {
       value: state.sorting,
       toggle: (column, multi) => dispatch({ type: "toggle-sort", column, multi }),
@@ -441,7 +371,6 @@ export function useDataTable<TData>(
       clear: () => dispatch({ type: "clear-sorting" }),
       get: sortingGet,
     },
-
     filters: {
       value: state.filters,
       add: (filter) => dispatch({ type: "add-filter", filter }),
@@ -450,15 +379,12 @@ export function useDataTable<TData>(
       set: (filters) => dispatch({ type: "set-filters", filters }),
       clear: () => dispatch({ type: "clear-filters" }),
     },
-
     search: {
       value: state.search,
       set: (value) => dispatch({ type: "set-search", search: value }),
     },
-
     density,
     setDensity,
-
     selection: {
       mode: selectionMode,
       state: selectionState,
@@ -471,14 +397,9 @@ export function useDataTable<TData>(
       selectedRows,
       selectedCount,
     },
-
     getRowId,
     mutations,
   };
-
-  // searchConfig is consumed by UI components, not the hook itself —
-  // kept on the options surface so consumers receive a single config object.
-  void searchConfig;
 }
 
 function cloneSelection(s: SelectionState): SelectionState {

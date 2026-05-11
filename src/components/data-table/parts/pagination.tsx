@@ -18,8 +18,6 @@ export interface DataTablePaginationProps
   pageSizeOptions?: number[];
   showPageSize?: boolean;
   showInfo?: boolean;
-  /** Render only the prev/next or first/last buttons (no page numbers).
-   *  Useful in cursor mode where total pages is unknown. */
   variant?: "full" | "simple";
 }
 
@@ -36,11 +34,9 @@ export function DataTablePagination({
     table.pagination;
   const total = table.total;
   const isCursor = table.state.pagination.mode === "cursor";
-
   const start = total != null ? (page - 1) * pageSize + 1 : null;
   const endRaw = total != null ? Math.min(total, page * pageSize) : null;
   const end = endRaw != null && endRaw < (start ?? 0) ? null : endRaw;
-
   return (
     <div
       data-data-table-pagination=""
@@ -117,7 +113,6 @@ export function DataTablePagination({
           </Popover>
         )}
       </div>
-
       <div className="flex items-center gap-1">
         {!isCursor && variant === "full" && (
           <PageButton
@@ -135,7 +130,6 @@ export function DataTablePagination({
         >
           <ChevronLeftIcon className="size-4" />
         </PageButton>
-
         {!isCursor && variant === "full" && pageCount > 0 && (
           <PageNumbers
             page={page}
@@ -143,7 +137,6 @@ export function DataTablePagination({
             onPageChange={(p) => table.pagination.setPage(p)}
           />
         )}
-
         <PageButton
           ariaLabel="Next page"
           disabled={!canNextPage}

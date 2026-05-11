@@ -8,23 +8,13 @@ import type {
 } from "../components/data-table/types";
 
 export interface StaticAdapterOptions<TData> {
-  /** The full dataset. Filtered / sorted / paginated client-side. */
   data: TData[];
-  /** Custom row identity. Defaults to `row.id` and falls back to index. */
   getRowId?: (row: TData, index: number) => RowId;
-  /** Columns to scan for global search. When omitted every string field on
-   *  the row is searched (case-insensitive substring). */
   searchFields?: (keyof TData & string)[];
-  /** Custom comparator for a sort column id. Falls back to a generic
-   *  string/number/date comparator. */
   sortFns?: Record<string, (a: TData, b: TData) => number>;
-  /** Custom predicate for a filter column id. When provided this overrides
-   *  the built-in operator handling for that column. */
   filterFns?: Record<string, (row: TData, filter: FilterValue) => boolean>;
 }
 
-/** In-memory data source. Useful for prototyping, fixtures, and pages where
- *  the dataset already lives in memory (e.g. a small CMS list). */
 export function staticAdapter<TData>(
   options: StaticAdapterOptions<TData>,
 ): DataSource<TData> {
@@ -34,7 +24,6 @@ export function staticAdapter<TData>(
     sortFns = {},
     filterFns = {},
   } = options;
-
   return {
     capabilities: {
       serverSort: false,
@@ -46,8 +35,6 @@ export function staticAdapter<TData>(
     },
     async fetch(state: TableQueryState): Promise<FetchResult<TData>> {
       let rows = data.slice();
-
-      // Filter
       if (state.filters.length > 0) {
         rows = rows.filter((row) =>
           state.filters.every((f) => {
@@ -58,8 +45,6 @@ export function staticAdapter<TData>(
           }),
         );
       }
-
-      // Search
       if (state.search.trim()) {
         const needle = state.search.trim().toLowerCase();
         const fields =
@@ -74,22 +59,16 @@ export function staticAdapter<TData>(
           }),
         );
       }
-
-      // Sort
       if (state.sorting.length > 0) {
         rows.sort((a, b) => compareWithSorts(a, b, state.sorting, sortFns));
       }
-
       const total = rows.length;
-
-      // Paginate
       let pageRows = rows;
       if (state.pagination.mode === "offset") {
         const { page, pageSize } = state.pagination;
         const start = (Math.max(1, page) - 1) * pageSize;
         pageRows = rows.slice(start, start + pageSize);
       }
-
       return { rows: pageRows, total };
     },
   };
