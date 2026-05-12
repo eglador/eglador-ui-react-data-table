@@ -380,7 +380,7 @@ export interface UrlSyncConfig {
   initialParams?: URLSearchParams;
 }
 
-export type SchemaFilterType =
+export type SchemaFieldType =
   | "string"
   | "integer"
   | "number"
@@ -392,20 +392,87 @@ export type SchemaFilterType =
 export type SchemaFilterOperator =
   | "exact"
   | "partial"
-  | "scope"
-  | "fulltext"
+  | "in"
+  | "eq"
   | "gte"
   | "lte"
-  | "gt"
-  | "lt"
-  | "in"
-  | "not_in";
+  | "scope"
+  | "fulltext";
 
-export interface SchemaFilter {
-  field: string;
-  type: SchemaFilterType;
+export type SchemaEndpointScope = "list" | "show" | "create" | "update";
+
+export type SchemaFormInput =
+  | "text"
+  | "textarea"
+  | "wysiwyg"
+  | "select"
+  | "multiselect"
+  | "checkbox"
+  | "file"
+  | "url"
+  | "datetime"
+  | "date"
+  | "number";
+
+export interface SchemaFieldFilter {
   operator: SchemaFilterOperator;
+  scope?: string;
+  description?: string;
+}
+
+export interface SchemaFieldForm {
+  input: SchemaFormInput;
+  required?: boolean;
+  default?: unknown;
+  max?: number;
+  hint?: string;
+  accept?: string;
+  group?: string;
+}
+
+export interface SchemaFieldValidation {
+  create?: string[];
+  update?: string[];
+}
+
+export interface SchemaField {
+  type: SchemaFieldType;
+  label?: string;
+  in: SchemaEndpointScope[];
+  sortable?: boolean;
+  default_visible?: boolean;
+  source?: string;
   values?: (string | number | boolean)[];
+  filter?: SchemaFieldFilter;
+  form?: SchemaFieldForm;
+  validation?: SchemaFieldValidation;
+}
+
+export type SchemaRelationType =
+  | "belongs_to"
+  | "has_many"
+  | "belongs_to_many"
+  | "morph_many";
+
+export interface SchemaRelation {
+  type: SchemaRelationType;
+  target: string;
+  label?: string;
+  source?: string;
+  default_loaded?: boolean;
+  in: SchemaEndpointScope[];
+  filter?: SchemaFieldFilter;
+  form?: SchemaFieldForm;
+  validation?: SchemaFieldValidation;
+  item_validation?: SchemaFieldValidation;
+}
+
+export interface SchemaVirtualFilter {
+  field: string;
+  type: SchemaFieldType;
+  operator: SchemaFilterOperator;
+  label?: string;
+  description?: string;
 }
 
 export interface SchemaPagination {
@@ -416,27 +483,44 @@ export interface SchemaPagination {
   max_size?: number;
 }
 
-export interface SchemaListView {
-  fields: string[];
-  relations: string[];
+export interface SchemaEndpoint {
+  method: string;
+  path: string;
+  auth: boolean;
+  policy: string | null;
+  default_sort?: string;
+  pagination?: SchemaPagination;
+}
+
+export interface SchemaMeta {
+  schema_version?: string;
+  api_version?: string;
+  generated_at?: string;
+  query_conventions?: Record<string, string>;
+  filter_operators?: Record<string, string>;
+  policy_definitions?: Record<string, string>;
+  relation_types?: Record<string, string>;
+}
+
+export interface SchemaResourceLabels {
+  singular?: string;
+  plural?: string;
 }
 
 export interface ResourceSchema {
   type: string;
-  filters: SchemaFilter[];
-  sorts: string[];
-  default_sort?: string;
-  includes: string[];
-  default_includes: string[];
-  fields: string[];
-  pagination: SchemaPagination;
-  views?: {
-    list?: SchemaListView;
-    show?: SchemaListView;
-    create?: unknown[];
-    update?: unknown[];
+  base_path?: string;
+  labels?: SchemaResourceLabels;
+  fields: Record<string, SchemaField>;
+  relations: Record<string, SchemaRelation>;
+  virtual_filters?: SchemaVirtualFilter[];
+  endpoints: {
+    list?: SchemaEndpoint;
+    show?: SchemaEndpoint;
+    create?: SchemaEndpoint;
+    update?: SchemaEndpoint;
+    delete?: SchemaEndpoint;
+    [key: string]: SchemaEndpoint | undefined;
   };
-  validation?: Record<string, unknown>;
-  operations?: Record<string, unknown>;
-  meta?: Record<string, unknown>;
+  meta?: SchemaMeta;
 }

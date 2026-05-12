@@ -31,11 +31,13 @@ import type {
   DataMutations,
   DataSource,
   FilterOperator,
-  FilterValue,
+  FilterOption,
   GetRowId,
   ResourceSchema,
   RetryBackoff,
-  SchemaFilter,
+  SchemaField,
+  SchemaRelation,
+  SchemaVirtualFilter,
   SelectionMode,
   SelectionState,
   SortValue,
@@ -88,8 +90,6 @@ export interface DataTableSchemaProps<TData = any> {
 
   getRowId?: GetRowId<TData>;
 
-  visibleColumns?: string[];
-  hideColumns?: string[];
   customColumns?: CustomColumnDef<TData>[];
   addColumns?: AddedColumnDef<TData>[];
 
@@ -102,9 +102,6 @@ export interface DataTableSchemaProps<TData = any> {
   refresh?: boolean;
 
   defaultPageSize?: number;
-  defaultSort?: SortValue[];
-  defaultFilters?: FilterValue[];
-  includes?: string[];
 
   selection?: SelectionMode | SelectionConfigInput;
 
@@ -184,9 +181,6 @@ export function DataTableSchema<TData = any>(
 
   const innerKey = JSON.stringify([
     props.defaultPageSize,
-    props.defaultSort,
-    props.defaultFilters,
-    props.includes,
     props.urlSync,
   ]);
 
@@ -208,7 +202,10 @@ function DataTableInner<TData>(
     typeof props.pagination === "object" ? props.pagination : {};
   const paginationEnabled = props.pagination !== false;
 
-  const derived = React.useMemo(() => deriveFromSchema(schema), [schema]);
+  const derived = React.useMemo(
+    () => deriveFromSchema(schema, props.endpoint, props.headers),
+    [schema, props.endpoint, props.headers],
+  );
 
   const source = React.useMemo<DataSource<TData>>(
     () =>
@@ -216,8 +213,8 @@ function DataTableInner<TData>(
         endpoint: props.endpoint,
         headers: props.headers,
         paramNames: {
-          page: "page[number]",
-          pageSize: "page[size]",
+          page: derived.pageParam,
+          pageSize: derived.pageSizeParam,
           sort: "sort",
           search: `filter[${derived.searchField ?? "search"}]`,
           include: "include",
@@ -246,12 +243,10 @@ function DataTableInner<TData>(
         page: 1,
         pageSize: props.defaultPageSize ?? derived.defaultPageSize,
       },
-      sorting:
-        fromUrl.sorting ?? props.defaultSort ?? derived.defaultSort,
-      filters: fromUrl.filters ?? props.defaultFilters ?? [],
+      sorting: fromUrl.sorting ?? derived.defaultSort,
+      filters: fromUrl.filters ?? [],
       search: fromUrl.search ?? "",
-      includes:
-        fromUrl.includes ?? props.includes ?? derived.defaultIncludes,
+      includes: fromUrl.includes ?? derived.defaultIncludes,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -261,20 +256,31 @@ function DataTableInner<TData>(
   const refresh = React.useCallback(() => tableRef.current?.refresh(), []);
 
   const mergedCustomColumns = React.useMemo(
-    () => mergeCustomColumns(props.customColumns, derived.filterMap),
-    [props.customColumns, derived.filterMap],
+    () =>
+      mergeCustomColumns(
+        props.customColumns,
+        derived.filterMap,
+        derived.relationFields,
+        derived.fieldLabels,
+      ),
+    [
+      props.customColumns,
+      derived.filterMap,
+      derived.relationFields,
+      derived.fieldLabels,
+    ],
   );
 
   const columns = useAutoColumns<TData>({
     fields: discovered,
-    visibleColumns:
-      props.visibleColumns ?? derived.listFields ?? undefined,
-    hideColumns: props.hideColumns,
+    visibleColumns: derived.listFields ?? undefined,
     customColumns: mergedCustomColumns,
     addColumns: props.addColumns,
-    sortable: props.sortable,
+    sortable: props.sortable ?? (derived.allowedSorts.length > 0),
     allowedSorts: derived.allowedSorts,
     allowedFilters: derived.allowedFilters,
+    fieldLabels: derived.fieldLabels,
+    hiddenByDefault: derived.hiddenByDefault,
     refresh,
   });
 
@@ -357,13 +363,15 @@ function DataTableInner<TData>(
     props.density ||
     props.columnVisibility;
 
+  const resolvedTitle = props.title ?? schema.labels?.plural;
+
   return (
     <DataTableRoot table={table} className={cn(variantClasses, props.className)}>
-      {(props.title || props.description) && (
+      {(resolvedTitle || props.description) && (
         <div className="flex flex-col gap-0.5 mb-1">
-          {props.title && (
+          {resolvedTitle && (
             <h2 className="text-base font-semibold text-zinc-900">
-              {props.title}
+              {resolvedTitle}
             </h2>
           )}
           {props.description && (
@@ -429,81 +437,180 @@ function DataTableInner<TData>(
   );
 }
 
+interface FilterMapEntry {
+  config: ColumnFilterConfig;
+  label?: string;
+}
+
 interface DerivedConfig {
   searchField: string | null;
+  searchPlaceholder: string | null;
   allowedSorts: string[];
   allowedFilters: string[];
   defaultIncludes: string[];
   defaultSort: SortValue[];
   defaultPageSize: number;
   pageSizeOptions: number[];
-  filterMap: Map<string, ColumnFilterConfig>;
+  filterMap: Map<string, FilterMapEntry>;
   listFields: string[] | null;
+  relationFields: string[];
+  fieldLabels: Record<string, string>;
+  hiddenByDefault: Set<string>;
+  pageParam: string;
+  pageSizeParam: string;
 }
 
-function deriveFromSchema(schema: ResourceSchema): DerivedConfig {
-  const filterMap = new Map<string, ColumnFilterConfig>();
+function deriveFromSchema(
+  schema: ResourceSchema,
+  endpoint: string,
+  headers: Record<string, string> | (() => Record<string, string>) | undefined,
+): DerivedConfig {
+  const list = schema.endpoints?.list;
+  const fields = schema.fields ?? {};
+  const relations = schema.relations ?? {};
+  const virtuals = schema.virtual_filters ?? [];
+
+  const filterMap = new Map<string, FilterMapEntry>();
   let searchField: string | null = null;
-  for (const f of schema.filters ?? []) {
-    if (f.operator === "fulltext") {
-      searchField = f.field;
+  let searchPlaceholder: string | null = null;
+
+  for (const [name, f] of Object.entries(fields)) {
+    if (!f.filter) continue;
+    const cfg = fieldToFilterConfig(f, endpoint, headers);
+    if (cfg) filterMap.set(name, { config: cfg, label: f.label });
+  }
+
+  for (const [name, r] of Object.entries(relations)) {
+    if (!r.filter) continue;
+    const cfg = relationToFilterConfig(r, endpoint, headers);
+    if (cfg) filterMap.set(name, { config: cfg, label: r.label });
+  }
+
+  for (const vf of virtuals) {
+    if (vf.operator === "fulltext") {
+      searchField = vf.field;
+      searchPlaceholder = vf.description ?? vf.label ?? null;
       continue;
     }
-    const cfg = schemaFilterToConfig(f);
-    if (cfg) filterMap.set(f.field, cfg);
+    const cfg = virtualFilterToConfig(vf);
+    if (cfg) filterMap.set(vf.field, { config: cfg, label: vf.label });
   }
 
   const defaultSort: SortValue[] = [];
-  if (schema.default_sort) {
-    const desc = schema.default_sort.startsWith("-");
-    const column = desc ? schema.default_sort.slice(1) : schema.default_sort;
+  const rawSort = list?.default_sort;
+  if (rawSort) {
+    const desc = rawSort.startsWith("-");
+    const column = desc ? rawSort.slice(1) : rawSort;
     defaultSort.push({ column, direction: desc ? "desc" : "asc" });
   }
 
-  const defaultPageSize = schema.pagination?.default_size ?? 25;
-  const maxPageSize = schema.pagination?.max_size;
+  const defaultPageSize = list?.pagination?.default_size ?? 25;
+  const maxPageSize = list?.pagination?.max_size;
   const pageSizeOptions = buildPageSizeOptions(defaultPageSize, maxPageSize);
 
-  const listView = schema.views?.list;
-  const listRelations = listView?.relations;
-  const listFields = listView?.fields;
-  const defaultIncludes =
-    listRelations && listRelations.length > 0
-      ? listRelations
-      : (schema.default_includes ?? []);
+  const listFieldNames = Object.entries(fields)
+    .filter(([, f]) => f.in.includes("list"))
+    .map(([name]) => name);
+  const listRelationNames = Object.entries(relations)
+    .filter(([, r]) => r.in.includes("list"))
+    .map(([name]) => name);
+  const visibleFields = [...listFieldNames, ...listRelationNames];
 
-  const visibleFields =
-    listFields && listFields.length > 0
-      ? mergeListFieldsWithRelations(listFields, listRelations)
-      : null;
+  const defaultIncludes = Object.entries(relations)
+    .filter(([, r]) => r.default_loaded === true && r.in.includes("list"))
+    .map(([name]) => name);
+
+  const allowedSorts = Object.entries(fields)
+    .filter(([, f]) => f.sortable === true)
+    .map(([name]) => name);
+
+  const fieldLabels: Record<string, string> = {};
+  for (const [name, f] of Object.entries(fields)) {
+    if (f.label) fieldLabels[name] = f.label;
+  }
+  for (const [name, r] of Object.entries(relations)) {
+    if (r.label) fieldLabels[name] = r.label;
+  }
+
+  const hiddenByDefault = new Set<string>();
+  for (const [name, f] of Object.entries(fields)) {
+    if (f.default_visible === false) hiddenByDefault.add(name);
+  }
+
+  const pageParam = list?.pagination?.number_parameter ?? "page[number]";
+  const pageSizeParam = list?.pagination?.size_parameter ?? "page[size]";
 
   return {
     searchField,
-    allowedSorts: schema.sorts ?? [],
+    searchPlaceholder,
+    allowedSorts,
     allowedFilters: Array.from(filterMap.keys()),
     defaultIncludes,
     defaultSort,
     defaultPageSize,
     pageSizeOptions,
     filterMap,
-    listFields: visibleFields,
+    listFields: visibleFields.length > 0 ? visibleFields : null,
+    relationFields: listRelationNames,
+    fieldLabels,
+    hiddenByDefault,
+    pageParam,
+    pageSizeParam,
   };
 }
 
-function mergeListFieldsWithRelations(
-  fields: string[],
-  relations: string[] | undefined,
-): string[] {
-  if (!relations || relations.length === 0) return fields;
-  const out = [...fields];
-  for (const r of relations) {
-    if (!out.includes(r)) out.push(r);
-  }
-  return out;
+const sourceOptionsCache = new Map<string, Promise<FilterOption[]>>();
+
+function buildSourceEndpoint(baseEndpoint: string, source: string): string {
+  const queryIndex = baseEndpoint.indexOf("?");
+  const path = queryIndex === -1 ? baseEndpoint : baseEndpoint.slice(0, queryIndex);
+  const lastSlash = path.lastIndexOf("/");
+  if (lastSlash === -1) return source;
+  return path.slice(0, lastSlash + 1) + source;
 }
 
-function schemaFilterToConfig(f: SchemaFilter): ColumnFilterConfig | null {
+function fetchSourceOptions(
+  url: string,
+  headers: Record<string, string> | (() => Record<string, string>) | undefined,
+): Promise<FilterOption[]> {
+  const cached = sourceOptionsCache.get(url);
+  if (cached) return cached;
+  const resolvedHeaders = typeof headers === "function" ? headers() : headers;
+  const promise = fetch(`${url}?page[size]=200`, {
+    headers: { Accept: "application/json", ...(resolvedHeaders ?? {}) },
+  })
+    .then(async (res) => {
+      if (!res.ok) return [] as FilterOption[];
+      const body = (await res.json()) as { data?: unknown[] };
+      const items = Array.isArray(body.data) ? body.data : [];
+      return items.map((raw) => {
+        const item = raw as { id?: string | number; name?: string; title?: string };
+        return {
+          value: (item.id ?? "") as string | number,
+          label: item.name ?? item.title ?? String(item.id ?? ""),
+        };
+      });
+    })
+    .catch(() => [] as FilterOption[]);
+  sourceOptionsCache.set(url, promise);
+  return promise;
+}
+
+function fieldToFilterConfig(
+  f: SchemaField,
+  baseEndpoint: string,
+  headers: Record<string, string> | (() => Record<string, string>) | undefined,
+): ColumnFilterConfig | null {
   if (f.type === "boolean") return { type: "boolean" };
+
+  if (f.source && (f.type === "integer" || f.type === "number")) {
+    const sourceUrl = buildSourceEndpoint(baseEndpoint, f.source);
+    return {
+      type: "select",
+      options: () => fetchSourceOptions(sourceUrl, headers),
+      defaultOperator: "eq",
+    };
+  }
 
   if (f.type === "enum" && f.values && f.values.length > 0) {
     return {
@@ -523,24 +630,56 @@ function schemaFilterToConfig(f: SchemaFilter): ColumnFilterConfig | null {
   if (f.type === "string") {
     return {
       type: "text",
-      defaultOperator: f.operator === "partial" ? "contains" : "eq",
+      defaultOperator: f.filter?.operator === "partial" ? "contains" : "eq",
     };
   }
 
   if (f.type === "date" || f.type === "datetime") {
-    const op: FilterOperator =
-      f.operator === "gte"
-        ? "gte"
-        : f.operator === "lte"
-          ? "lte"
-          : f.operator === "gt"
-            ? "gt"
-            : f.operator === "lt"
-              ? "lt"
-              : "eq";
-    return { type: "date", defaultOperator: op };
+    return { type: "date", defaultOperator: "eq" };
   }
 
+  return null;
+}
+
+function relationToFilterConfig(
+  r: SchemaRelation,
+  baseEndpoint: string,
+  headers: Record<string, string> | (() => Record<string, string>) | undefined,
+): ColumnFilterConfig | null {
+  const op = r.filter?.operator;
+  if (!r.source) return null;
+  const sourceUrl = buildSourceEndpoint(baseEndpoint, r.source);
+  if (op === "in") {
+    return {
+      type: "multi-select",
+      options: () => fetchSourceOptions(sourceUrl, headers),
+    };
+  }
+  return {
+    type: "select",
+    options: () => fetchSourceOptions(sourceUrl, headers),
+    defaultOperator: "eq",
+  };
+}
+
+function virtualFilterToConfig(
+  vf: SchemaVirtualFilter,
+): ColumnFilterConfig | null {
+  if (vf.type === "date" || vf.type === "datetime") {
+    const op: FilterOperator =
+      vf.operator === "gte" ? "gte" : vf.operator === "lte" ? "lte" : "eq";
+    return { type: "date", defaultOperator: op };
+  }
+  if (vf.type === "string") {
+    return {
+      type: "text",
+      defaultOperator: vf.operator === "partial" ? "contains" : "eq",
+    };
+  }
+  if (vf.type === "integer" || vf.type === "number") {
+    return { type: "number", defaultOperator: "eq" };
+  }
+  if (vf.type === "boolean") return { type: "boolean" };
   return null;
 }
 
@@ -558,26 +697,80 @@ function buildPageSizeOptions(def: number, max?: number): number[] {
 
 function mergeCustomColumns<TData>(
   user: CustomColumnDef<TData>[] | undefined,
-  filterMap: Map<string, ColumnFilterConfig>,
+  filterMap: Map<string, FilterMapEntry>,
+  relationFields: string[],
+  fieldLabels: Record<string, string>,
 ): CustomColumnDef<TData>[] {
   const userArr = user ?? [];
   const seen = new Set<string>();
   const merged: CustomColumnDef<TData>[] = [];
+  const relationSet = new Set(relationFields);
+  const resolveLabel = (field: string): string | undefined =>
+    fieldLabels[field] ?? filterMap.get(field)?.label;
   for (const col of userArr) {
     seen.add(col.field);
     const inferred = filterMap.get(col.field);
-    if (!col.filter && inferred) {
-      merged.push({ ...col, filter: inferred });
-    } else {
-      merged.push(col);
+    const patch: Partial<CustomColumnDef<TData>> = {};
+    if (!col.filter && inferred) patch.filter = inferred.config;
+    if (col.label == null) {
+      const label = resolveLabel(col.field);
+      if (label) patch.label = label;
+    }
+    if (
+      col.render == null &&
+      col.accessor == null &&
+      relationSet.has(col.field)
+    ) {
+      patch.render = defaultRelationRenderer as CustomColumnDef<TData>["render"];
+    }
+    merged.push(Object.keys(patch).length > 0 ? { ...col, ...patch } : col);
+  }
+  for (const [field, entry] of filterMap) {
+    if (!seen.has(field)) {
+      merged.push({
+        field,
+        label: fieldLabels[field] ?? entry.label,
+        filter: entry.config,
+      });
     }
   }
-  for (const [field, filter] of filterMap) {
+  for (const field of relationFields) {
     if (!seen.has(field)) {
-      merged.push({ field, filter });
+      merged.push({
+        field,
+        label: fieldLabels[field],
+        render: defaultRelationRenderer as CustomColumnDef<TData>["render"],
+      });
+      seen.add(field);
     }
   }
   return merged;
+}
+
+function defaultRelationRenderer(value: unknown): React.ReactNode {
+  if (value == null) return null;
+  if (Array.isArray(value)) {
+    const labels = value
+      .map((item) => relationLabel(item))
+      .filter((s): s is string => !!s);
+    if (labels.length === 0) return null;
+    return labels.join(", ");
+  }
+  return relationLabel(value);
+}
+
+function relationLabel(item: unknown): string | null {
+  if (item == null) return null;
+  if (typeof item !== "object") return String(item);
+  const obj = item as Record<string, unknown>;
+  for (const key of ["name", "title", "label", "slug"]) {
+    const v = obj[key];
+    if (typeof v === "string" && v.length > 0) return v;
+  }
+  if (typeof obj.id === "number" || typeof obj.id === "string") {
+    return `#${obj.id}`;
+  }
+  return null;
 }
 
 function resolveVariant(
