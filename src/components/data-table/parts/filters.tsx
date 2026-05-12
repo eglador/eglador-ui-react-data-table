@@ -198,7 +198,7 @@ export function DataTableAddFilter() {
   return (
     <Popover
       align="start"
-      contentClassName="p-2 min-w-[14rem]"
+      contentClassName="p-2 w-72"
       onOpenChange={(open) => {
         if (!open) setPickedColumn(null);
       }}
@@ -301,7 +301,7 @@ function FilterEditor({ column, filter, onSave, onCancel }: FilterEditorProps) {
         <select
           value={operator}
           onChange={(e) => onOperatorChange(e.target.value as FilterOperator)}
-          className="h-8 px-2 text-xs rounded-sm border border-zinc-200 bg-white text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-1 cursor-pointer"
+          className="min-w-0 h-8 px-2 text-xs rounded-sm border border-zinc-200 bg-white text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-1 cursor-pointer"
         >
           {allowed.map((op) => (
             <option key={op} value={op}>
@@ -357,7 +357,7 @@ function FilterValueInput({
         value={(value as string) ?? ""}
         placeholder={config.placeholder ?? "Value"}
         onChange={(e) => onChange(e.target.value)}
-        className="flex-1 h-8 px-2 text-xs rounded-sm border border-zinc-200 bg-white text-zinc-900 placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-1"
+        className="flex-1 min-w-0 h-8 px-2 text-xs rounded-sm border border-zinc-200 bg-white text-zinc-900 placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-1"
       />
     );
   }
@@ -377,7 +377,7 @@ function FilterValueInput({
                 max,
               ])
             }
-            className="flex-1 h-8 px-2 text-xs rounded-sm border border-zinc-200 bg-white"
+            className="flex-1 min-w-0 h-8 px-2 text-xs rounded-sm border border-zinc-200 bg-white"
           />
           <span className="text-xs text-zinc-400">…</span>
           <input
@@ -389,7 +389,7 @@ function FilterValueInput({
                 e.target.value === "" ? "" : Number(e.target.value),
               ])
             }
-            className="flex-1 h-8 px-2 text-xs rounded-sm border border-zinc-200 bg-white"
+            className="flex-1 min-w-0 h-8 px-2 text-xs rounded-sm border border-zinc-200 bg-white"
           />
         </div>
       );
@@ -401,7 +401,7 @@ function FilterValueInput({
         onChange={(e) =>
           onChange(e.target.value === "" ? "" : Number(e.target.value))
         }
-        className="flex-1 h-8 px-2 text-xs rounded-sm border border-zinc-200 bg-white text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-1"
+        className="flex-1 min-w-0 h-8 px-2 text-xs rounded-sm border border-zinc-200 bg-white text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-1"
       />
     );
   }
@@ -416,14 +416,14 @@ function FilterValueInput({
             type="date"
             value={min ?? ""}
             onChange={(e) => onChange([e.target.value, max])}
-            className="flex-1 h-8 px-2 text-xs rounded-sm border border-zinc-200 bg-white"
+            className="flex-1 min-w-0 h-8 px-2 text-xs rounded-sm border border-zinc-200 bg-white"
           />
           <span className="text-xs text-zinc-400">…</span>
           <input
             type="date"
             value={max ?? ""}
             onChange={(e) => onChange([min, e.target.value])}
-            className="flex-1 h-8 px-2 text-xs rounded-sm border border-zinc-200 bg-white"
+            className="flex-1 min-w-0 h-8 px-2 text-xs rounded-sm border border-zinc-200 bg-white"
           />
         </div>
       );
@@ -433,7 +433,7 @@ function FilterValueInput({
         type="date"
         value={(value as string) ?? ""}
         onChange={(e) => onChange(e.target.value)}
-        className="flex-1 h-8 px-2 text-xs rounded-sm border border-zinc-200 bg-white text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-1"
+        className="flex-1 min-w-0 h-8 px-2 text-xs rounded-sm border border-zinc-200 bg-white text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-1"
       />
     );
   }
@@ -527,7 +527,7 @@ function SelectFilterInput({
     <select
       value={(value as string | number) ?? ""}
       onChange={(e) => onChange(coerceOptionValue(e.target.value, options))}
-      className="flex-1 h-8 px-2 text-xs rounded-sm border border-zinc-200 bg-white text-zinc-900 cursor-pointer"
+      className="flex-1 min-w-0 h-8 px-2 text-xs rounded-sm border border-zinc-200 bg-white text-zinc-900 cursor-pointer"
     >
       <option value="">—</option>
       {options.map((opt) => (

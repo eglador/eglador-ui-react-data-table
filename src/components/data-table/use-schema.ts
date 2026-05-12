@@ -4,7 +4,6 @@ import * as React from "react";
 import type { ResourceSchema } from "./types";
 
 const inflight = new Map<string, Promise<ResourceSchema>>();
-const resolved = new Map<string, ResourceSchema>();
 
 export interface UseSchemaResult {
   schema: ResourceSchema | null;
@@ -17,12 +16,8 @@ export function useSchema(
   endpoint: string | null | undefined,
   headers?: Record<string, string> | (() => Record<string, string>),
 ): UseSchemaResult {
-  const [schema, setSchema] = React.useState<ResourceSchema | null>(() =>
-    endpoint ? resolved.get(endpoint) ?? null : null,
-  );
-  const [isLoading, setIsLoading] = React.useState(
-    !!endpoint && !resolved.has(endpoint),
-  );
+  const [schema, setSchema] = React.useState<ResourceSchema | null>(null);
+  const [isLoading, setIsLoading] = React.useState(!!endpoint);
   const [error, setError] = React.useState<unknown>(null);
   const [tick, setTick] = React.useState(0);
 
@@ -37,53 +32,54 @@ export function useSchema(
       return;
     }
 
-    const cached = resolved.get(endpoint);
-    if (cached && tick === 0) {
-      setSchema(cached);
-      setIsLoading(false);
-      setError(null);
-      return;
-    }
-
-    if (tick > 0) {
-      inflight.delete(endpoint);
-      resolved.delete(endpoint);
-    }
-
-    setIsLoading(true);
+    setIsLoading((prev) => (schema ? prev : true));
     setError(null);
     let cancelled = false;
 
-    let promise = inflight.get(endpoint);
+    const sep = endpoint.includes("?") ? "&" : "?";
+    const bustUrl = `${endpoint}${sep}_t=${Date.now()}`;
+    const inflightKey = endpoint;
+
+    let promise = inflight.get(inflightKey);
     if (!promise) {
       const h = headersRef.current;
       const resolvedHeaders = typeof h === "function" ? h() : h;
-      promise = fetch(endpoint, {
-        headers: { Accept: "application/json", ...(resolvedHeaders ?? {}) },
+      promise = fetch(bustUrl, {
+        cache: "no-store",
+        headers: {
+          Accept: "application/json",
+          "Cache-Control": "no-cache",
+          ...(resolvedHeaders ?? {}),
+        },
       }).then(async (res) => {
         if (!res.ok) {
           throw new Error(
             `Schema fetch failed (${res.status} ${res.statusText})`,
           );
         }
-        const body = (await res.json()) as { data?: ResourceSchema } | ResourceSchema;
-        const data =
-          (body as { data?: ResourceSchema }).data ?? (body as ResourceSchema);
-        resolved.set(endpoint, data);
-        return data;
+        const body = (await res.json()) as {
+          data?: Partial<ResourceSchema>;
+          meta?: ResourceSchema["meta"];
+        };
+        const dataObj = body.data ?? (body as Partial<ResourceSchema>);
+        return {
+          ...(dataObj as ResourceSchema),
+          meta: dataObj?.meta ?? body.meta,
+        } satisfies ResourceSchema;
       });
-      inflight.set(endpoint, promise);
+      inflight.set(inflightKey, promise);
     }
 
     promise
       .then((data) => {
         if (cancelled) return;
+        inflight.delete(inflightKey);
         setSchema(data);
         setIsLoading(false);
       })
       .catch((err) => {
         if (cancelled) return;
-        inflight.delete(endpoint);
+        inflight.delete(inflightKey);
         setError(err);
         setIsLoading(false);
       });
@@ -91,6 +87,7 @@ export function useSchema(
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endpoint, tick]);
 
   const refresh = React.useCallback(() => setTick((t) => t + 1), []);

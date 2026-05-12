@@ -130,7 +130,7 @@ export const DataTableFooter = React.forwardRef<
       {children ?? (
         <tr>
           {table.visibleColumns.map((col) => (
-            <DataTableHeaderCell key={col.id} column={col} />
+            <DataTableFooterCell key={col.id} column={col} />
           ))}
         </tr>
       )}
@@ -138,6 +138,111 @@ export const DataTableFooter = React.forwardRef<
   );
 });
 DataTableFooter.displayName = "DataTable.Footer";
+
+export interface DataTableFooterCellProps
+  extends React.ThHTMLAttributes<HTMLTableCellElement> {
+  column: ColumnDef<unknown>;
+}
+
+export const DataTableFooterCell = React.forwardRef<
+  HTMLTableCellElement,
+  DataTableFooterCellProps
+>(function DataTableFooterCell(
+  { column, className, children, style, ...rest },
+  ref,
+) {
+  const colWidth = (column as { width?: number | string }).width;
+  const minWidth = (column as { minWidth?: number }).minWidth;
+  const maxWidth = (column as { maxWidth?: number }).maxWidth;
+  const align = (column as { align?: "left" | "center" | "right" }).align ?? "left";
+  const sticky = (column as { sticky?: "left" | "right" }).sticky;
+  const headerCls = (column as { headerClassName?: string }).headerClassName;
+
+  if (column.type === "select") {
+    const customFooter = (column as { footer?: React.ReactNode }).footer;
+    return (
+      <th
+        ref={ref}
+        data-column-id={column.id}
+        data-column-type="select"
+        style={{ width: colWidth ?? 44, minWidth, maxWidth, ...style }}
+        className={cn(
+          "px-3 py-2 text-left font-medium align-middle border-t border-zinc-200",
+          sticky && stickyClasses(sticky),
+          headerCls,
+          className,
+        )}
+        {...rest}
+      >
+        {customFooter}
+      </th>
+    );
+  }
+  if (column.type === "drag" || column.type === "expander") {
+    const customFooter = (column as { footer?: React.ReactNode }).footer;
+    return (
+      <th
+        ref={ref}
+        data-column-id={column.id}
+        data-column-type={column.type}
+        style={{ width: colWidth ?? 36, minWidth, maxWidth, ...style }}
+        className={cn(
+          "px-2 py-2 align-middle border-t border-zinc-200",
+          sticky && stickyClasses(sticky),
+          headerCls,
+          className,
+        )}
+        {...rest}
+      >
+        {customFooter}
+      </th>
+    );
+  }
+  if (column.type === "actions") {
+    const customFooter = (column as { footer?: React.ReactNode }).footer;
+    return (
+      <th
+        ref={ref}
+        data-column-id={column.id}
+        data-column-type="actions"
+        style={{ width: colWidth ?? 56, minWidth, maxWidth, ...style }}
+        className={cn(
+          "px-2 py-2 align-middle text-right font-medium text-xs uppercase tracking-wide border-t border-zinc-200",
+          sticky && stickyClasses(sticky ?? "right"),
+          headerCls,
+          className,
+        )}
+        {...rest}
+      >
+        {customFooter}
+      </th>
+    );
+  }
+  
+  const dataCol = column as DataColumnDef<unknown>;
+  const footerNode =
+    dataCol.footer ?? (typeof dataCol.header !== "function" ? dataCol.header : column.id);
+
+  return (
+    <th
+      ref={ref}
+      data-column-id={column.id}
+      style={{ width: colWidth, minWidth, maxWidth, ...style }}
+      className={cn(
+        "px-3 py-2 font-medium align-middle whitespace-nowrap border-t border-zinc-200",
+        align === "center" && "text-center",
+        align === "right" && "text-right",
+        sticky && stickyClasses(sticky),
+        headerCls,
+        className,
+      )}
+      {...rest}
+    >
+      {children ?? footerNode}
+    </th>
+  );
+});
+DataTableFooterCell.displayName = "DataTable.FooterCell";
 
 export interface DataTableHeaderCellProps
   extends React.ThHTMLAttributes<HTMLTableCellElement> {

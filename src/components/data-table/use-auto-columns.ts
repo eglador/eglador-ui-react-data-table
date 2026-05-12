@@ -19,6 +19,8 @@ export interface UseAutoColumnsOptions<TData> {
   sortable?: boolean;
   allowedSorts?: string[];
   allowedFilters?: string[];
+  fieldLabels?: Record<string, string>;
+  hiddenByDefault?: Set<string>;
   refresh: () => void;
 }
 
@@ -31,11 +33,11 @@ export function useAutoColumns<TData>(
     const discovered = options.fields;
     let fields: string[];
     if (visible && visible.length > 0) {
-      fields = visible;
+      fields = [...visible];
     } else if (discovered.length > 0) {
       fields = hide && hide.length > 0
         ? discovered.filter((f) => !hide.includes(f))
-        : discovered;
+        : [...discovered];
     } else {
       fields = [];
     }
@@ -43,12 +45,15 @@ export function useAutoColumns<TData>(
     for (const c of options.customColumns ?? []) {
       customMap.set(c.field, c);
     }
+
     const sortAllow = options.allowedSorts
       ? new Set(options.allowedSorts)
       : null;
     const filterAllow = options.allowedFilters
       ? new Set(options.allowedFilters)
       : null;
+    const labels = options.fieldLabels ?? {};
+    const hidden = options.hiddenByDefault;
     const cols: ColumnDef<TData>[] = fields.map((field) => {
       const custom = customMap.get(field);
       return buildDataColumn<TData>(
@@ -58,8 +63,28 @@ export function useAutoColumns<TData>(
         sortAllow,
         filterAllow,
         options.refresh,
+        hidden?.has(field) ? false : true,
+        labels[field],
       );
     });
+    const visibleSet = new Set(fields);
+    for (const custom of options.customColumns ?? []) {
+      if (visibleSet.has(custom.field)) continue;
+      if (!custom.filter) continue;
+      const col = buildDataColumn<TData>(
+        custom.field,
+        custom,
+        options.sortable ?? false,
+        sortAllow,
+        filterAllow,
+        options.refresh,
+        false,
+        labels[custom.field],
+      );
+      col.visible = false;
+      col.hideable = false;
+      cols.push(col);
+    }
     for (const add of options.addColumns ?? []) {
       const col = buildAddedColumn<TData>(add, options.refresh);
       if (add.position === "start") {
@@ -92,6 +117,8 @@ function buildDataColumn<TData>(
   sortAllow: Set<string> | null,
   filterAllow: Set<string> | null,
   refresh: () => void,
+  defaultVisible: boolean,
+  fieldLabel: string | undefined,
 ): DataColumnDef<TData> {
   const sortKey = custom?.sortKey ?? field;
   const filterKey = custom?.filterKey ?? field;
@@ -106,14 +133,14 @@ function buildDataColumn<TData>(
   const col: DataColumnDef<TData> = {
     id: field,
     type: "data",
-    header: custom?.label ?? humanize(field),
+    header: custom?.label ?? fieldLabel ?? humanize(field),
     width: custom?.width,
     minWidth: custom?.minWidth,
     maxWidth: custom?.maxWidth,
     align: custom?.align,
     sticky: custom?.sticky,
     hideable: custom?.hideable,
-    visible: custom?.visible,
+    visible: custom?.visible ?? defaultVisible,
     sortable,
     sortKey: custom?.sortKey,
     filter,

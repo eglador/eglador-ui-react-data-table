@@ -22,10 +22,6 @@ interface Article {
 
 const cat = (name: string) => ({ table: { category: name } });
 
-function safeArray<T>(v: unknown, fallback: T[] = []): T[] {
-  return Array.isArray(v) ? (v as T[]) : fallback;
-}
-
 function parseJsonObject<T>(raw: string | undefined, fallback: T): T {
   const trimmed = raw?.trim();
   if (!trimmed) return fallback;
@@ -74,9 +70,6 @@ type PlaygroundArgs = {
   schemaEndpoint: string;
   headersJson: string;
 
-  visibleColumns: string[];
-  hideColumns: string[];
-
   sortable: boolean;
   filters: boolean;
   search: boolean;
@@ -87,15 +80,6 @@ type PlaygroundArgs = {
   paginationVariant: "full" | "simple";
   paginationShowInfo: boolean;
   defaultPageSize: number;
-
-  defaultSort: { column: string; direction: "asc" | "desc" }[];
-  defaultFilters: {
-    id?: string;
-    column: string;
-    operator: string;
-    value: unknown;
-  }[];
-  includes: string[];
 
   selectionMode: "none" | "single" | "multiple";
 
@@ -136,23 +120,12 @@ const meta: Meta<PlaygroundArgs> = {
     },
   },
   args: {
-    title: "Articles",
-    description: "Schema-driven Laravel/Spatie tablo.",
+    title: "",
+    description: "",
 
     endpoint: "http://127.0.0.1:8000/api/v1/articles",
     schemaEndpoint: "",
     headersJson: "",
-
-    visibleColumns: [
-      "cover_image",
-      "title",
-      "category",
-      "author",
-      "status",
-      "view_count",
-      "published_at",
-    ],
-    hideColumns: [],
 
     sortable: true,
     filters: true,
@@ -164,10 +137,6 @@ const meta: Meta<PlaygroundArgs> = {
     paginationVariant: "full",
     paginationShowInfo: true,
     defaultPageSize: 0,
-
-    defaultSort: [],
-    defaultFilters: [],
-    includes: [],
 
     selectionMode: "multiple",
 
@@ -182,7 +151,7 @@ const meta: Meta<PlaygroundArgs> = {
     bulkActionsBar: true,
     addColumns: [
       { field: "select", type: "select", position: "start" },
-      { field: "actions", type: "actions", position: "end", label: "Actions" },
+      { field: "actions", type: "actions", position: "end", label: "İşlemler" },
     ],
 
     urlSync: false,
@@ -219,19 +188,6 @@ const meta: Meta<PlaygroundArgs> = {
       ...cat("Backend"),
     },
 
-    visibleColumns: {
-      control: "object",
-      description:
-        "Whitelist + order. Array of field ids. Empty = show all auto-discovered.",
-      ...cat("Columns"),
-    },
-    hideColumns: {
-      control: "object",
-      description:
-        "Blacklist. Ignored when `visibleColumns` is non-empty.",
-      ...cat("Columns"),
-    },
-
     sortable: {
       control: "boolean",
       description:
@@ -264,25 +220,6 @@ const meta: Meta<PlaygroundArgs> = {
       control: { type: "number", min: 0, max: 200, step: 5 },
       description: "0 = use schema's `pagination.default_size`.",
       ...cat("Pagination"),
-    },
-
-    defaultSort: {
-      control: "object",
-      description:
-        "Override schema's `default_sort`. Array of `{ column, direction }`. Empty = use schema default.",
-      ...cat("Sort"),
-    },
-    defaultFilters: {
-      control: "object",
-      description:
-        "Initial filters. Array of `{ column, operator, value }`. Each entry auto-gets a stable id.",
-      ...cat("Filter"),
-    },
-    includes: {
-      control: "object",
-      description:
-        "Override schema's `default_includes`. Empty array = use schema default.",
-      ...cat("Includes"),
     },
 
     selectionMode: {
@@ -354,9 +291,6 @@ export const Playground: StoryObj<PlaygroundArgs> = {
     const headers =
       Object.keys(parsedHeaders).length > 0 ? parsedHeaders : undefined;
 
-    const visibleColumns = safeArray<string>(args.visibleColumns);
-    const hideColumns = safeArray<string>(args.hideColumns);
-
     const actionsRender = (
       _value: unknown,
       row: Article,
@@ -409,15 +343,12 @@ export const Playground: StoryObj<PlaygroundArgs> = {
       <div className="p-6 max-w-screen-2xl mx-auto" key={remountKey}>
         <DataTable<Article>
           id="articles"
-          title={args.title}
-          description={args.description}
+          title={args.title || undefined}
+          description={args.description || undefined}
 
           endpoint={args.endpoint}
           schemaEndpoint={args.schemaEndpoint || undefined}
           headers={headers}
-
-          visibleColumns={visibleColumns.length > 0 ? visibleColumns : undefined}
-          hideColumns={hideColumns.length > 0 ? hideColumns : undefined}
 
           sortable={args.sortable}
           filters={args.filters}
@@ -425,39 +356,22 @@ export const Playground: StoryObj<PlaygroundArgs> = {
           search={
             args.search
               ? {
-                  placeholder: args.searchPlaceholder,
-                  debounceMs: args.searchDebounceMs,
-                }
+                placeholder: args.searchPlaceholder,
+                debounceMs: args.searchDebounceMs,
+              }
               : false
           }
 
           pagination={
             args.paginationEnabled
               ? {
-                  variant: args.paginationVariant,
-                  showInfo: args.paginationShowInfo,
-                }
+                variant: args.paginationVariant,
+                showInfo: args.paginationShowInfo,
+              }
               : false
           }
           defaultPageSize={
             args.defaultPageSize > 0 ? args.defaultPageSize : undefined
-          }
-
-          defaultSort={
-            Array.isArray(args.defaultSort) && args.defaultSort.length > 0
-              ? args.defaultSort
-              : undefined
-          }
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          defaultFilters={
-            Array.isArray(args.defaultFilters) && args.defaultFilters.length > 0
-              ? (args.defaultFilters as any)
-              : undefined
-          }
-          includes={
-            Array.isArray(args.includes) && args.includes.length > 0
-              ? args.includes
-              : undefined
           }
 
           density={args.density}
@@ -508,7 +422,6 @@ export const Playground: StoryObj<PlaygroundArgs> = {
             },
             {
               field: "title",
-              label: "Title",
               minWidth: 280,
               render: (_value, row) => (
                 <div className="flex flex-col gap-0.5 min-w-0 max-w-md">
@@ -523,7 +436,6 @@ export const Playground: StoryObj<PlaygroundArgs> = {
             },
             {
               field: "category",
-              label: "Category",
               accessor: (row) => row.category?.name,
               render: (value) =>
                 value ? (
@@ -536,22 +448,19 @@ export const Playground: StoryObj<PlaygroundArgs> = {
             },
             {
               field: "author",
-              label: "Author",
               accessor: (row) => row.author?.name,
             },
             {
               field: "status",
-              label: "Status",
               render: (value) => {
                 const s = String(value);
                 const isPublished = s === "published";
                 return (
                   <span
-                    className={`inline-flex items-center px-2 h-6 text-[10px] font-medium uppercase tracking-wide rounded-sm ${
-                      isPublished
+                    className={`inline-flex items-center px-2 h-6 text-[10px] font-medium uppercase tracking-wide rounded-sm ${isPublished
                         ? "bg-zinc-900 text-white"
                         : "bg-zinc-100 text-zinc-600 border border-zinc-200"
-                    }`}
+                      }`}
                   >
                     {s}
                   </span>
@@ -560,7 +469,6 @@ export const Playground: StoryObj<PlaygroundArgs> = {
             },
             {
               field: "view_count",
-              label: "Views",
               align: "right",
               render: (value) => (
                 <span className="tabular-nums text-zinc-700">
@@ -570,7 +478,6 @@ export const Playground: StoryObj<PlaygroundArgs> = {
             },
             {
               field: "published_at",
-              label: "Published",
               render: (value) => {
                 if (!value)
                   return <span className="text-zinc-400 text-xs">—</span>;
@@ -593,30 +500,30 @@ export const Playground: StoryObj<PlaygroundArgs> = {
           bulkActions={
             args.bulkActionsBar
               ? ({ rows, clear }) => (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => alert(`Archive ${rows.length} articles`)}
-                      className="px-2 h-7 text-xs font-medium rounded-sm bg-white/10 text-white hover:bg-white/20 cursor-pointer"
-                    >
-                      Archive
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => alert(`Export ${rows.length} articles`)}
-                      className="px-2 h-7 text-xs font-medium rounded-sm bg-white/10 text-white hover:bg-white/20 cursor-pointer"
-                    >
-                      Export CSV
-                    </button>
-                    <button
-                      type="button"
-                      onClick={clear}
-                      className="px-2 h-7 text-xs font-medium rounded-sm bg-white/10 text-white hover:bg-white/20 cursor-pointer"
-                    >
-                      Cancel
-                    </button>
-                  </>
-                )
+                <>
+                  <button
+                    type="button"
+                    onClick={() => alert(`Archive ${rows.length} articles`)}
+                    className="px-2 h-7 text-xs font-medium rounded-sm bg-white/10 text-white hover:bg-white/20 cursor-pointer"
+                  >
+                    Archive
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => alert(`Export ${rows.length} articles`)}
+                    className="px-2 h-7 text-xs font-medium rounded-sm bg-white/10 text-white hover:bg-white/20 cursor-pointer"
+                  >
+                    Export CSV
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clear}
+                    className="px-2 h-7 text-xs font-medium rounded-sm bg-white/10 text-white hover:bg-white/20 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </>
+              )
               : undefined
           }
 
