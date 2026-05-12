@@ -10,23 +10,29 @@
 ![react >= 18](https://img.shields.io/badge/react-%3E%3D18-61DAFB?style=flat-square&logo=react&logoColor=white)
 ![typescript](https://img.shields.io/badge/typescript-ready-3178C6?style=flat-square&logo=typescript&logoColor=white)
 
-Headless, accessible data table for React — column management, sorting, pagination, filtering, row selection, and a compound API for full markup control. **Tailwind CSS v4**, zero runtime dependencies.
+Schema-driven, accessible data table for React. Backend bir schema endpoint sunar — frontend kolon, filter, sort, include, pagination ve form metadata'sını otomatik okur. **Tailwind CSS v4**, zero runtime dependencies, TypeScript-first.
 
-> **Status:** Pre-alpha — API design in progress. The package scaffold (build, Storybook, CI) is in place; component implementation is next.
+## Highlights
 
-## Planned Features
-
-- **Compound API** — `<DataTable.Root>`, `.Header`, `.Body`, `.Row`, `.Cell`, `.Pagination` for full markup control
-- **Column management** — declarative column definitions with custom renderers, sortability, visibility, resizing
-- **Sorting** — single / multi-column, controlled or uncontrolled, custom comparators
-- **Pagination** — built-in pager with page size, jump-to, total count
-- **Filtering** — column-level filters, global search, custom predicates
-- **Row selection** — single / multiple, controlled or uncontrolled, with select-all
-- **Empty / loading / error states** — first-class slots, no flash-of-empty
-- **Server-side mode** — opt out of internal state for sorting / pagination / filtering when data lives on the server
-- **Accessible** — semantic `<table>` markup, full keyboard navigation, ARIA roles for sortable headers and live status
-- **TypeScript-first** — generic over row shape, every column inferred
-- **Zero runtime dependencies** — only `clsx` + `tailwind-merge`, both pre-bundled
+- **Schema-driven** — tek endpoint, sıfır kolon konfigürasyonu
+- **Compound API** — `<DataTable.Root>`, `.Header`, `.Body`, `.Row`, `.Cell`, `.Toolbar`, `.Search`, `.FilterBar`, `.Pagination`
+- **Headless hooks** — `useDataTable`, `useAutoColumns`, `useSchema`
+- **Spatie Query Builder adapter** — `filter[X]=Y`, `sort=-X`, `include=a,b`, `page[size]=N`
+- **16 filter operators** — eq, neq, gt(e), lt(e), contains, starts/ends_with, in/not_in, between, is_null/is_not_null, is_true/is_false
+- **Multi-sort** — Shift / Cmd / Ctrl + click
+- **Selection** — single / multiple, controlled & uncontrolled
+- **URL sync** — durum URL'e yansır, sayfa yenilense de korunur
+- **Density** — compact / comfortable / spacious
+- **Variants** — default / bordered / striped / minimal
+- **Sticky header & footer**, sticky kolonlar (left/right)
+- **Custom columns** — render override, accessor, label, width, sticky, align
+- **Added columns** — select / drag / actions / expander (start/end pozisyon)
+- **Auto relation render** — relation objelerinden `name` / `title` / `slug` otomatik çıkarım
+- **i18n** — tüm label'lar schema'dan; frontend hardcode etmez
+- **Schema-driven search** — `searchable: true` field'lardan otomatik placeholder, `min_length` threshold'u
+- **Tailwind v4** — zinc paleti, `rounded-sm`, modern utility-first
+- **Zero runtime deps** — `clsx` + `tailwind-merge` pre-bundled
+- **TypeScript-first** — row shape üzerinde generic, schema tip-safe
 
 ## Installation
 
@@ -38,49 +44,159 @@ npm install eglador-ui-react-data-table
 
 ## Setup
 
-Add the following to your global stylesheet so Tailwind picks up the component classes:
-
 ```css
+/* app/globals.css */
 @import "tailwindcss";
 @source "../node_modules/eglador-ui-react-data-table";
 ```
 
-The `@source` path is relative to the CSS file location:
-
-| Framework | CSS file location | Path |
+| Framework | CSS file | `@source` path |
 |---|---|---|
 | Next.js (App Router) | `app/globals.css` | `../node_modules/eglador-ui-react-data-table` |
 | Next.js (`src/`) | `src/app/globals.css` | `../../node_modules/eglador-ui-react-data-table` |
 | Vite | `src/index.css` | `../node_modules/eglador-ui-react-data-table` |
 
+## Quick start
+
+```tsx
+import { DataTable } from "eglador-ui-react-data-table";
+
+export default function ArticlesPage() {
+  return <DataTable endpoint="/api/v1/articles" />;
+}
+```
+
+Schema endpoint otomatik infer edilir (`/api/v1/articles` → `/api/v1/schema/articles`). Toolbar özelliklerini açın:
+
+```tsx
+<DataTable
+  endpoint="/api/v1/articles"
+  search
+  filters
+  pagination
+  refresh
+  density
+  columnVisibility
+  selection="multiple"
+/>
+```
+
+## Schema yapısı (özet)
+
+```json
+{
+  "data": {
+    "type": "articles",
+    "labels": { "singular": "Makale", "plural": "Makaleler" },
+    "fields": {
+      "title": {
+        "type": "string",
+        "label": "Başlık",
+        "in": ["list", "show", "create", "update"],
+        "sortable": true,
+        "searchable": true,
+        "filter": { "operator": "partial" },
+        "form": { "input": "text", "required": true, "max": 255 }
+      }
+    },
+    "relations": {
+      "category": {
+        "type": "belongs_to",
+        "target": "categories",
+        "label": "Kategori",
+        "default_loaded": true,
+        "in": ["list", "show"]
+      }
+    },
+    "virtual_filters": [
+      { "field": "search", "operator": "fulltext", "label": "Arama", "min_length": 2 }
+    ],
+    "endpoints": {
+      "list": {
+        "method": "GET",
+        "default_sort": "-published_at",
+        "pagination": { "default_size": 15, "max_size": 100 }
+      }
+    }
+  }
+}
+```
+
+Schema-driven her şey:
+
+- Sütun başlıkları & filter chip'leri: `field.label`
+- Sortable kolonlar: `field.sortable: true`
+- Default sort: `endpoints.list.default_sort`
+- Filter UI türleri: `field.filter.operator`'a göre
+- Async select option'ları: `field.source` lookup endpoint
+- Default visible: `field.default_visible !== false`
+- Pagination params: `pagination.{number,size}_parameter`
+- Title: `labels.plural`
+- Search placeholder: `searchable: true` field'lardan kompoze
+
+## Custom columns
+
+```tsx
+<DataTable
+  endpoint="/api/v1/articles"
+  customColumns={[
+    {
+      field: "title",
+      minWidth: 280,
+      render: (_v, row) => (
+        <div>
+          <div className="font-medium">{row.title}</div>
+          <div className="text-xs text-zinc-500">{row.slug}</div>
+        </div>
+      ),
+    },
+  ]}
+/>
+```
+
+## Headless mode
+
+Tam custom render:
+
+```tsx
+import { useDataTable, laravelAdapter } from "eglador-ui-react-data-table";
+
+const source = laravelAdapter({ endpoint: "/api/v1/articles" });
+const table = useDataTable({
+  source,
+  columns: [{ id: "title", accessorKey: "title", header: "Başlık", sortable: true }],
+  initialState: { pagination: { mode: "offset", page: 1, pageSize: 25 } },
+});
+```
+
 ## Compatibility
 
-Works with any React-based framework: **Next.js**, **Remix**, **Vite + React**, **Gatsby**.
+Next.js, Remix, Vite + React, Gatsby — herhangi bir React framework.
 
-The component is marked `"use client"` (uses `useState` / `useEffect`). Place it inside a client component or after a `"use client"` directive.
+Bileşen `"use client"` ile işaretlenmiştir (`useState` / `useEffect`). Bir client component içine yerleştirin.
 
 ## Development
 
 ```bash
 npm install
 npm run dev               # tsup watch mode
-npm run build             # production build to dist/
+npm run build             # production build → dist/
 npm run typecheck         # tsc --noEmit
-npm run storybook         # Storybook dev (http://localhost:6006)
-npm run build-storybook   # static Storybook export
+npm run storybook         # http://localhost:6006
+npm run build-storybook   # static export
 ```
 
 ## Publishing
 
-Publishing is automated via GitHub Actions. When a GitHub Release is created, the package is published to npm.
+GitHub Actions ile otomatik:
 
-1. Update `version` in `package.json`
-2. Commit and push
-3. Create a GitHub Release with a matching tag (e.g. `v1.0.0`)
+1. `package.json` `version` güncelle
+2. Commit & push
+3. Eşleşen tag ile GitHub Release oluştur (örn. `v1.0.0`)
 
 ## Author
 
-Kenan Gündoğan — [https://github.com/kenangundogan](https://github.com/kenangundogan)
+Kenan Gündoğan — [github.com/kenangundogan](https://github.com/kenangundogan)
 
 Maintained under [Eglador](https://github.com/eglador)
 

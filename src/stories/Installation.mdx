@@ -4,11 +4,11 @@ import { Meta } from "@storybook/addon-docs/blocks";
 
 # Installation
 
-Package installation, peer dependencies, and Tailwind v4 integration.
+Paket kurulumu, peer dependency'ler ve Tailwind v4 entegrasyonu.
 
 ---
 
-## 1. Install the package
+## 1. Paketi kur
 
 ```bash
 npm install eglador-ui-react-data-table
@@ -26,7 +26,7 @@ pnpm add eglador-ui-react-data-table
 
 ## 2. Peer dependencies
 
-The following peer dependencies must be present in your project:
+Projenizde aşağıdaki peer dep'ler bulunmalı:
 
 <table>
   <thead>
@@ -51,15 +51,15 @@ The following peer dependencies must be present in your project:
   </tbody>
 </table>
 
-These are typically already present in modern React projects (Next.js, Vite, Remix).
+Modern React projelerinde (Next.js, Vite, Remix) bunlar zaten mevcuttur.
 
-> **Zero runtime dependencies.** `clsx` and `tailwind-merge` are pre-bundled — nothing else is pulled into your app.
+> **Zero runtime dependencies.** `clsx` ve `tailwind-merge` pre-bundle edilmiştir — uygulamanıza fazladan bir şey eklenmez.
 
 ---
 
-## 3. Add `@source` for Tailwind v4
+## 3. Tailwind v4 için `@source` ekle
 
-Tailwind needs to scan classes inside the package. Add the `@source` directive to your global stylesheet:
+Tailwind, paket içindeki sınıfları tarayabilmek için `@source` direktifine ihtiyaç duyar. Global stylesheet'inize ekleyin:
 
 ```css
 @import "tailwindcss";
@@ -67,14 +67,14 @@ Tailwind needs to scan classes inside the package. Add the `@source` directive t
 @source "../node_modules/eglador-ui-react-data-table";
 ```
 
-The `@source` path varies based on your CSS file location:
+`@source` yolu CSS dosyanızın konumuna göre değişir:
 
 <table>
   <thead>
     <tr>
       <th align="left">Framework</th>
-      <th align="left">CSS file</th>
-      <th align="left"><code>@source</code> path</th>
+      <th align="left">CSS dosyası</th>
+      <th align="left"><code>@source</code> yolu</th>
     </tr>
   </thead>
   <tbody>
@@ -98,18 +98,30 @@ The `@source` path varies based on your CSS file location:
 
 ---
 
-## 4. Server components note (Next.js)
+## 4. Server components notu (Next.js)
 
-The component is marked `"use client"` (it uses `useState` / `useEffect`). Place it inside a client component or after a `"use client"` directive in the file you're importing it into.
-
----
-
-## 5. Verify
-
-The component API will be finalized in the next milestone. See **Getting Started** once the implementation lands.
+Bileşen `"use client"` ile işaretlenmiştir (`useState` / `useEffect` kullanır). Onu bir client component içine veya `"use client"` direktifi olan bir dosyaya yerleştirin.
 
 ---
 
-## Issues?
+## 5. Backend tarafı
 
-Open an [issue on GitHub](https://github.com/eglador/eglador-ui-react-data-table/issues).
+DataTable, **schema endpoint**'ten beslenir. Backend'inizin şu yapıyı sunması gerekir:
+
+- **Schema endpoint** (örn. `/api/v1/schema/articles`) — kaynak metadata'sı
+- **List endpoint** (örn. `/api/v1/articles`) — Spatie Query Builder uyumlu veri
+
+Schema yapısı için [Welcome](?path=/docs/welcome--docs) sayfasındaki örneğe bakın. Laravel için referans backend implementasyonu eglador-cms-laravel paketinden alınabilir.
+
+Default param konvansiyonu (Spatie Query Builder):
+
+- `?filter[field]=value` — filter
+- `?sort=-field` — desc sort
+- `?include=rel1,rel2` — eager-load relations
+- `?page[number]=1&page[size]=15` — pagination
+
+---
+
+## Sorun mu var?
+
+[GitHub'da issue açın](https://github.com/eglador/eglador-ui-react-data-table/issues).
