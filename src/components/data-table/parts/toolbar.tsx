@@ -40,13 +40,14 @@ export interface DataTableSearchProps
   extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange"> {
   placeholder?: string;
   debounceMs?: number;
+  minLength?: number;
 }
 
 export const DataTableSearch = React.forwardRef<
   HTMLInputElement,
   DataTableSearchProps
 >(function DataTableSearch(
-  { className, placeholder = "Search…", debounceMs = 300, ...rest },
+  { className, placeholder = "Search…", debounceMs = 300, minLength = 0, ...rest },
   ref,
 ) {
   const table = useDataTableContext();
@@ -56,11 +57,12 @@ export const DataTableSearch = React.forwardRef<
   }, [table.search.value]);
   React.useEffect(() => {
     if (local === table.search.value) return;
+    if (local.length > 0 && local.length < minLength) return;
     const id = window.setTimeout(() => {
       table.search.set(local);
     }, debounceMs);
     return () => window.clearTimeout(id);
-  }, [local, debounceMs]);
+  }, [local, debounceMs, minLength]);
   return (
     <div
       data-data-table-search=""

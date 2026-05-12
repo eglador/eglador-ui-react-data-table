@@ -47,6 +47,7 @@ import type {
 export interface SearchConfigInput {
   placeholder?: string;
   debounceMs?: number;
+  minLength?: number;
 }
 
 export interface PaginationConfigInput {
@@ -385,8 +386,11 @@ function DataTableInner<TData>(
           {props.toolbarStart}
           {searchEnabled && (
             <DataTableSearch
-              placeholder={searchCfg.placeholder}
+              placeholder={
+                searchCfg.placeholder ?? derived.searchPlaceholder ?? undefined
+              }
               debounceMs={searchCfg.debounceMs}
+              minLength={searchCfg.minLength ?? derived.searchMinLength}
             />
           )}
           {props.filters !== false && <DataTableFilterBar />}
@@ -445,6 +449,7 @@ interface FilterMapEntry {
 interface DerivedConfig {
   searchField: string | null;
   searchPlaceholder: string | null;
+  searchMinLength: number;
   allowedSorts: string[];
   allowedFilters: string[];
   defaultIncludes: string[];
@@ -472,7 +477,8 @@ function deriveFromSchema(
 
   const filterMap = new Map<string, FilterMapEntry>();
   let searchField: string | null = null;
-  let searchPlaceholder: string | null = null;
+  let searchPlaceholderDescription: string | null = null;
+  let searchMinLength = 0;
 
   for (const [name, f] of Object.entries(fields)) {
     if (!f.filter) continue;
@@ -489,12 +495,22 @@ function deriveFromSchema(
   for (const vf of virtuals) {
     if (vf.operator === "fulltext") {
       searchField = vf.field;
-      searchPlaceholder = vf.description ?? vf.label ?? null;
+      searchPlaceholderDescription = vf.description ?? vf.label ?? null;
+      searchMinLength = vf.min_length ?? 0;
       continue;
     }
     const cfg = virtualFilterToConfig(vf);
     if (cfg) filterMap.set(vf.field, { config: cfg, label: vf.label });
   }
+
+  const searchableLabels: string[] = [];
+  for (const f of Object.values(fields)) {
+    if (f.searchable && f.label) searchableLabels.push(f.label);
+  }
+  const searchPlaceholder =
+    searchableLabels.length > 0
+      ? `${searchableLabels.join(", ")} içinde ara…`
+      : searchPlaceholderDescription;
 
   const defaultSort: SortValue[] = [];
   const rawSort = list?.default_sort;
@@ -543,6 +559,7 @@ function deriveFromSchema(
   return {
     searchField,
     searchPlaceholder,
+    searchMinLength,
     allowedSorts,
     allowedFilters: Array.from(filterMap.keys()),
     defaultIncludes,

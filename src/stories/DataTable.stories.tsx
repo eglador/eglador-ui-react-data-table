@@ -124,13 +124,13 @@ const meta: Meta<PlaygroundArgs> = {
     description: "",
 
     endpoint: "http://127.0.0.1:8000/api/v1/articles",
-    schemaEndpoint: "",
+    schemaEndpoint: "http://127.0.0.1:8000/api/v1/schema/articles",
     headersJson: "",
 
     sortable: true,
     filters: true,
     search: true,
-    searchPlaceholder: "Search articles…",
+    searchPlaceholder: "",
     searchDebounceMs: 250,
 
     paginationEnabled: true,
@@ -356,7 +356,7 @@ export const Playground: StoryObj<PlaygroundArgs> = {
           search={
             args.search
               ? {
-                placeholder: args.searchPlaceholder,
+                placeholder: args.searchPlaceholder || undefined,
                 debounceMs: args.searchDebounceMs,
               }
               : false
