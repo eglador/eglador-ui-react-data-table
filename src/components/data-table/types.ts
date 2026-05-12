@@ -441,6 +441,7 @@ export interface SchemaField {
   in: SchemaEndpointScope[];
   sortable?: boolean;
   default_visible?: boolean;
+  searchable?: boolean;
   source?: string;
   values?: (string | number | boolean)[];
   filter?: SchemaFieldFilter;
@@ -473,6 +474,9 @@ export interface SchemaVirtualFilter {
   operator: SchemaFilterOperator;
   label?: string;
   description?: string;
+  mode?: "contains" | "starts_with" | "ends_with" | "exact" | "fulltext";
+  min_length?: number;
+  case_sensitive?: boolean;
 }
 
 export interface SchemaPagination {
