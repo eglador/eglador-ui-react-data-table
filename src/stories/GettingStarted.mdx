@@ -4,44 +4,261 @@ import { Meta } from "@storybook/addon-docs/blocks";
 
 # Getting Started
 
-> **Status:** Pre-alpha — the API is being designed. This page will be filled out once the first component lands. The package scaffold (build, Storybook, CI) is already in place.
+İlk DataTable örneği, custom column ile zenginleştirme ve headless mod.
 
 ---
 
-## What's ready
+## En basit kullanım
 
-- Build pipeline (`tsup` → CJS + ESM + DTS)
-- TypeScript strict mode (`tsc --noEmit`)
-- Tailwind v4 + `@source` integration
-- Storybook 10 with `@storybook/addon-docs`, `@storybook/addon-a11y`, `@storybook/addon-vitest`
-- CI / npm publish workflows
-- LICENSE, README, package metadata
+Schema-driven mod. Frontend hiçbir kolon yapılandırması yapmaz; her şey schema'dan gelir:
 
-## What's next
+```tsx
+import { DataTable } from "eglador-ui-react-data-table";
 
-- Column / row API design
-- Compound subcomponents (`<DataTable.Root>`, `.Header`, `.Body`, `.Row`, `.Cell`, `.Pagination`)
-- Headless hook (`useDataTable`) for fully custom rendering
-- Sorting / pagination / filtering state machines
-- Row selection with controlled / uncontrolled modes
-- Server-side mode
-- Storybook stories: Playground, Variants, Pagination, Sorting, Filtering, Selection, ServerSide, Empty / Loading, Headless
-
----
-
-## Setup recap
-
-If you haven't installed the package yet, see the **Installation** page.
-
-```bash
-npm install eglador-ui-react-data-table
+export default function ArticlesPage() {
+  return <DataTable endpoint="/api/v1/articles" />;
+}
 ```
 
-```css
-@import "tailwindcss";
-@source "../node_modules/eglador-ui-react-data-table";
+Schema endpoint otomatik infer edilir: `/api/v1/articles` → `/api/v1/schema/articles`. Manuel set etmek isterseniz:
+
+```tsx
+<DataTable
+  endpoint="/api/v1/articles"
+  schemaEndpoint="/api/v1/schema/articles"
+/>
 ```
 
 ---
 
-For bugs or suggestions, open an [issue on GitHub](https://github.com/eglador/eglador-ui-react-data-table/issues).
+## Auth header'ları
+
+```tsx
+<DataTable
+  endpoint="/api/v1/articles"
+  headers={() => ({ Authorization: `Bearer ${getToken()}` })}
+/>
+```
+
+`headers` fonksiyon olarak verilirse her istekte çağrılır (token rotation güvenli).
+
+---
+
+## Toolbar özellikleri
+
+Açıp kapatın:
+
+```tsx
+<DataTable
+  endpoint="/api/v1/articles"
+  search                  // arama kutusu
+  filters                 // filter chip bar + Add filter
+  refresh                 // refresh butonu
+  density                 // compact/comfortable/spacious toggle
+  columnVisibility        // kolon görünürlük menüsü
+  pagination              // pagination bar
+/>
+```
+
+---
+
+## Custom column — render override
+
+Schema'dan gelen kolon değerlerini özelleştirmek için:
+
+```tsx
+<DataTable
+  endpoint="/api/v1/articles"
+  customColumns={[
+    {
+      field: "cover_image",
+      width: 56,
+      hideable: false,
+      render: (value) => (
+        <img src={String(value)} alt="" className="w-9 h-9 rounded-sm object-cover" />
+      ),
+    },
+    {
+      field: "title",
+      minWidth: 280,
+      render: (_value, row) => (
+        <div className="flex flex-col gap-0.5">
+          <span className="font-medium text-zinc-900">{row.title}</span>
+          <span className="text-xs text-zinc-500">{row.slug}</span>
+        </div>
+      ),
+    },
+    {
+      field: "status",
+      render: (value) => (
+        <span className="px-2 h-6 rounded-sm bg-zinc-100 text-xs uppercase">
+          {String(value)}
+        </span>
+      ),
+    },
+  ]}
+/>
+```
+
+`customColumns` schema'da olan field'ları zenginleştirir; **schema'da olmayan field'lar tabloda görünmez**. Label vermezseniz schema'nın `field.label`'ı kullanılır.
+
+---
+
+## Added columns — select, actions, drag
+
+Schema'da olmayan ek kolonlar:
+
+```tsx
+<DataTable
+  endpoint="/api/v1/articles"
+  selection="multiple"
+  addColumns={[
+    { field: "select", type: "select", position: "start" },
+    {
+      field: "actions",
+      type: "actions",
+      position: "end",
+      label: "İşlemler",
+      render: (_v, row, ctx) => (
+        <div className="flex gap-1 justify-end">
+          <button onClick={() => editArticle(row.id)}>Edit</button>
+          <button onClick={async () => {
+            await deleteArticle(row.id);
+            ctx.refresh();
+          }}>
+            Delete
+          </button>
+        </div>
+      ),
+    },
+  ]}
+/>
+```
+
+Sticky pozisyonlama: `select` start (sol sticky), `actions` end (sağ sticky) — default.
+
+---
+
+## Bulk actions
+
+```tsx
+<DataTable
+  endpoint="/api/v1/articles"
+  selection="multiple"
+  bulkActions={({ rows, clear }) => (
+    <>
+      <button onClick={() => archiveAll(rows)}>Arşivle ({rows.length})</button>
+      <button onClick={clear}>Seçimi iptal et</button>
+    </>
+  )}
+/>
+```
+
+Bir veya birden fazla satır seçildiğinde toolbar üzerinde görünür.
+
+---
+
+## URL sync
+
+Filter, sort, pagination state'i URL'e yansır → sayfa yenilense bile state korunur:
+
+```tsx
+<DataTable
+  endpoint="/api/v1/articles"
+  urlSync                                 // veya { paramPrefix: "art_" }
+/>
+```
+
+Birden fazla DataTable aynı sayfada varsa farklı prefix verin: `urlSync={{ paramPrefix: "art_" }}` ve `urlSync={{ paramPrefix: "usr_" }}`.
+
+---
+
+## Compound API — tam markup kontrolü
+
+Toolbar / pagination / body yerleşimini siz yönetin:
+
+```tsx
+import {
+  DataTable,
+  useDataTable,
+  useSchema,
+  inferSchemaEndpoint,
+} from "eglador-ui-react-data-table";
+
+function CustomTable() {
+  const { schema } = useSchema(inferSchemaEndpoint("/api/v1/articles"));
+  // ... kendi source/columns kur, useDataTable ile state al ...
+
+  return (
+    <DataTable.Root table={table}>
+      <DataTable.Toolbar>
+        <DataTable.Search />
+        <DataTable.FilterBar />
+        <div className="ml-auto">
+          <DataTable.RefreshButton />
+          <DataTable.ColumnVisibilityMenu />
+        </div>
+      </DataTable.Toolbar>
+
+      <DataTable.Container stickyHeader maxHeight={600}>
+        <DataTable.Table>
+          <DataTable.Header />
+          <DataTable.Body />
+          <DataTable.Footer />
+        </DataTable.Table>
+      </DataTable.Container>
+
+      <DataTable.Pagination />
+    </DataTable.Root>
+  );
+}
+```
+
+---
+
+## Headless mod — `useDataTable`
+
+Tam custom render için sadece state machine'i kullanın:
+
+```tsx
+import { useDataTable, useDataSource, laravelAdapter } from "eglador-ui-react-data-table";
+
+function HeadlessTable() {
+  const source = useMemo(
+    () => laravelAdapter({ endpoint: "/api/v1/articles" }),
+    []
+  );
+
+  const table = useDataTable({
+    source,
+    columns: [
+      { id: "title", accessorKey: "title", header: "Başlık", sortable: true },
+      { id: "status", accessorKey: "status", header: "Durum" },
+    ],
+    initialState: {
+      pagination: { mode: "offset", page: 1, pageSize: 25 },
+    },
+    selection: { mode: "multiple" },
+  });
+
+  return (
+    <div>
+      {table.rows.map((row) => (
+        <div key={row.id}>{row.title}</div>
+      ))}
+      <button onClick={() => table.pagination.next()}>Sonraki</button>
+    </div>
+  );
+}
+```
+
+Hiç DOM render etmez — sadece state + helpers.
+
+---
+
+## Daha fazla
+
+- [Playground](?path=/story/data-table-playground--playground) — tüm propları canlı tara
+- [Welcome](?path=/docs/welcome--docs) — schema yapısı ve overview
+- [Installation](?path=/docs/installation--docs) — kurulum & setup
+- [GitHub](https://github.com/eglador/eglador-ui-react-data-table) — issue / PR

@@ -252,7 +252,12 @@ const meta: Meta<PlaygroundArgs> = {
     addColumns: {
       control: "object",
       description:
-        "Extra columns. `{ field, type: 'select'|'drag'|'actions'|'expander', position: 'start'|'end', label?, width? }`. Actions render is provided in code.",
+        `
+Extra columns configuration:
+- **field**: Column identifier
+- **type**: 'select' | 'drag' | 'actions' | 'expander'
+- **position**: 'start' | 'end'
+`,
       ...cat("Layout"),
     },
 
@@ -458,8 +463,8 @@ export const Playground: StoryObj<PlaygroundArgs> = {
                 return (
                   <span
                     className={`inline-flex items-center px-2 h-6 text-[10px] font-medium uppercase tracking-wide rounded-sm ${isPublished
-                        ? "bg-zinc-900 text-white"
-                        : "bg-zinc-100 text-zinc-600 border border-zinc-200"
+                      ? "bg-zinc-900 text-white"
+                      : "bg-zinc-100 text-zinc-600 border border-zinc-200"
                       }`}
                   >
                     {s}

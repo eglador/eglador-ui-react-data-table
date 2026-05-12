@@ -16,42 +16,91 @@ import { Meta } from "@storybook/addon-docs/blocks";
   <img src="https://img.shields.io/badge/typescript-ready-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="typescript" />
 </div>
 
-Headless, accessible data table for React — column management, sorting, pagination, filtering, row selection, and a compound API for full markup control. Tailwind v4, zero runtime dependencies.
-
-> **Status:** Pre-alpha — API design in progress. The package scaffold (build, Storybook, CI) is in place; component implementation is next.
+Schema-driven, accessible data table for React — tek endpoint'ten kolon, filter, sort, include, pagination ve form metadata'sını okuyup tabloyu otomatik kurar. Tailwind v4, zero runtime dependencies, TypeScript-first.
 
 ---
 
-## Installation
+## Schema-driven nedir?
 
-```bash
-npm install eglador-ui-react-data-table
+Backend bir `/api/v1/schema/{resource}` endpoint'i sunar; her field için tüm metadata tek yerdedir:
+
+```json
+{
+  "data": {
+    "type": "articles",
+    "labels": { "singular": "Makale", "plural": "Makaleler" },
+    "fields": {
+      "title": {
+        "type": "string",
+        "label": "Başlık",
+        "in": ["list", "show", "create", "update"],
+        "sortable": true,
+        "searchable": true,
+        "filter": { "operator": "partial" },
+        "form": { "input": "text", "required": true, "max": 255 }
+      }
+    },
+    "relations": {
+      "category": { "type": "belongs_to", "target": "categories", "label": "Kategori", "default_loaded": true, "in": ["list", "show"] }
+    },
+    "virtual_filters": [
+      { "field": "search", "operator": "fulltext", "label": "Arama", "min_length": 2 }
+    ],
+    "endpoints": {
+      "list": { "method": "GET", "path": "", "default_sort": "-published_at", "pagination": { "default_size": 15, "max_size": 100 } }
+    }
+  }
+}
 ```
 
-## Setup
+Frontend tarafı sadece şu kadar:
 
-Add the following to your global stylesheet (e.g. `app/globals.css`):
-
-```css
-@import "tailwindcss";
-@source "../node_modules/eglador-ui-react-data-table";
+```tsx
+<DataTable endpoint="/api/v1/articles" />
 ```
+
+Otomatik gelen davranışlar:
+
+- Sütun başlıkları, filter chip'leri, search placeholder — schema label'larından
+- Sortable kolonlar — `field.sortable === true`
+- Default sort — `endpoints.list.default_sort`
+- Filter UI türleri — `field.filter.operator`'a göre (date / select / boolean / text)
+- Async select option'ları — `field.source` lookup endpoint'inden
+- Relation render — `name` / `title` / `slug` otomatik
+- Default visible kolon kontrolü — `field.default_visible: false`
+- Pagination param'ları — `pagination.number_parameter / size_parameter`
+- Title — `labels.plural`
 
 ---
 
-## Planned Features
+## Öne çıkanlar
 
-- **Compound API** — `<DataTable.Root>`, `.Header`, `.Body`, `.Row`, `.Cell`, `.Pagination` for full markup control
-- **Column management** — declarative column definitions with custom renderers, sortability, visibility, resizing
-- **Sorting** — single / multi-column, controlled or uncontrolled, custom comparators
-- **Pagination** — built-in pager with page size, jump-to, total count
-- **Filtering** — column-level filters, global search, custom predicates
-- **Row selection** — single / multiple, controlled or uncontrolled, with select-all
-- **Empty / loading / error states** — first-class slots, no flash-of-empty
-- **Server-side mode** — opt out of internal state for sorting / pagination / filtering when data lives on the server
-- **Accessible** — semantic `<table>` markup, full keyboard navigation, ARIA roles for sortable headers and live status
-- **TypeScript-first** — generic over row shape, every column inferred
-- **Zero runtime dependencies** — only `clsx` + `tailwind-merge`, both pre-bundled
+- **Schema-driven** — backend tek doğruluk kaynağı; frontend kolon yapılandırması yapmaz
+- **Compound API** — `<DataTable.Root>`, `.Header`, `.Body`, `.Row`, `.Cell`, `.Toolbar`, `.Search`, `.FilterBar`, `.Pagination` vb. tam markup kontrolü için
+- **Headless hook** — `useDataTable`, `useAutoColumns`, `useSchema` — kendi render'ını kur
+- **Spatie Query Builder adapter** — `filter[X]=Y`, `sort=-X`, `include=a,b`, `page[size]=N`
+- **16 filter operatörü** — eq, neq, gt, gte, lt, lte, contains, starts_with, ends_with, in, not_in, between, is_null, is_not_null, is_true, is_false
+- **Multi-sort** — Shift/Cmd + tıklama
+- **Selection** — single / multiple, controlled & uncontrolled
+- **URL sync** — Next.js / React Router / manuel adapter
+- **Density** — compact / comfortable / spacious
+- **Variants** — default / bordered / striped / minimal
+- **Sticky header & footer** — container `maxHeight` ile aktif
+- **Custom columns** — render override, accessor, label, width, sticky, align
+- **Added columns** — select / drag / actions / expander
+- **Auto relation render** — `category.name` / `tags[].name` otomatik çıkarım
+- **i18n** — tüm label'lar schema'dan (UI generic yazılar için ayrı)
+- **Tailwind v4** — zinc-only paleti, `rounded-sm`, modern utility-first
+- **Zero runtime deps** — `clsx` + `tailwind-merge` pre-bundled
+- **TypeScript-first** — generic over row shape, schema tip-safe
+
+---
+
+## İçindekiler
+
+- [Installation](?path=/docs/installation--docs) — paket kurulumu, peer deps, Tailwind v4 entegrasyonu
+- [Getting Started](?path=/docs/getting-started--docs) — ilk DataTable örneği, custom column, headless mod
+- [Playground](?path=/story/data-table-playground--playground) — tüm propları canlı dene
 
 ---
 
