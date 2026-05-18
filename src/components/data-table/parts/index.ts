@@ -51,8 +51,15 @@ export type { DataTablePaginationProps } from "./pagination";
 export { DataTableBulkActions } from "./bulk-actions";
 export type { DataTableBulkActionsProps } from "./bulk-actions";
 
-export { DataTableFilterBar, DataTableAddFilter } from "./filters";
-export type { DataTableFilterBarProps } from "./filters";
+export {
+  DataTableFilterBar,
+  DataTableActiveFilters,
+  DataTableAddFilter,
+} from "./filters";
+export type {
+  DataTableFilterBarProps,
+  DataTableActiveFiltersProps,
+} from "./filters";
 
 export { Popover } from "./popover";
 export type { PopoverProps } from "./popover";

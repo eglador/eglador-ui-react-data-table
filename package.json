@@ -1,6 +1,6 @@
 {
   "name": "eglador-ui-react-data-table",
-  "version": "1.0.0-alpha.2",
+  "version": "1.0.0-alpha.3",
   "description": "Headless, accessible data table for React — sorting, pagination, filtering, column management, compound subcomponents, zero runtime dependencies",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
