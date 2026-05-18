@@ -101,6 +101,29 @@ export function DataTableFilterBar({
   return (
     <div
       data-data-table-filter-bar=""
+      className={cn("flex items-center gap-1.5", className)}
+      {...rest}
+    >
+      <DataTableAddFilter />
+    </div>
+  );
+}
+DataTableFilterBar.displayName = "DataTable.FilterBar";
+
+export interface DataTableActiveFiltersProps
+  extends React.HTMLAttributes<HTMLDivElement> {}
+
+export function DataTableActiveFilters({
+  className,
+  ...rest
+}: DataTableActiveFiltersProps) {
+  const table = useDataTableContext();
+  const filterableColumns = getFilterableColumns(table.columns);
+  if (filterableColumns.length === 0) return null;
+  if (table.filters.value.length === 0) return null;
+  return (
+    <div
+      data-data-table-active-filters=""
       className={cn(
         "flex items-center gap-1.5 flex-wrap",
         className,
@@ -110,20 +133,17 @@ export function DataTableFilterBar({
       {table.filters.value.map((filter) => (
         <FilterChip key={filter.id} filter={filter} />
       ))}
-      <DataTableAddFilter />
-      {table.filters.value.length > 0 && (
-        <button
-          type="button"
-          onClick={() => table.filters.clear()}
-          className="ml-1 px-2 h-7 text-xs text-zinc-500 hover:text-zinc-900 cursor-pointer"
-        >
-          Clear all
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={() => table.filters.clear()}
+        className="ml-1 px-3 h-9 text-sm text-zinc-500 hover:text-zinc-900 cursor-pointer"
+      >
+        Clear all
+      </button>
     </div>
   );
 }
-DataTableFilterBar.displayName = "DataTable.FilterBar";
+DataTableActiveFilters.displayName = "DataTable.ActiveFilters";
 
 function FilterChip({ filter }: { filter: FilterValue }) {
   const table = useDataTableContext();
@@ -146,7 +166,7 @@ function FilterChip({ filter }: { filter: FilterValue }) {
           role="button"
           tabIndex={0}
           className={cn(
-            "inline-flex items-center gap-1.5 h-7 pl-2 pr-1 text-xs rounded-sm",
+            "inline-flex items-center gap-1.5 h-9 pl-3 pr-1.5 text-sm rounded-sm",
             "border border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-1",
             "cursor-pointer",
@@ -166,9 +186,9 @@ function FilterChip({ filter }: { filter: FilterValue }) {
               e.stopPropagation();
               table.filters.remove(filter.id);
             }}
-            className="inline-flex items-center justify-center size-5 rounded-sm text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 cursor-pointer"
+            className="inline-flex items-center justify-center size-6 rounded-sm text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 cursor-pointer"
           >
-            <XIcon className="size-3" />
+            <XIcon className="size-3.5" />
           </button>
         </span>
       }
@@ -206,14 +226,14 @@ export function DataTableAddFilter() {
         <button
           type="button"
           className={cn(
-            "inline-flex items-center gap-1 h-7 px-2 text-xs rounded-sm",
+            "inline-flex items-center gap-1.5 h-9 px-3 text-sm rounded-sm",
             "border border-dashed border-zinc-300 bg-white text-zinc-700",
             "hover:bg-zinc-50 hover:border-zinc-400 hover:text-zinc-900",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-1",
             "cursor-pointer transition-colors",
           )}
         >
-          <PlusIcon className="size-3.5" />
+          <PlusIcon className="size-4" />
           <span>Add filter</span>
         </button>
       }

@@ -4,6 +4,7 @@ import * as React from "react";
 import { cn } from "../../lib/utils";
 import { laravelAdapter } from "../../adapters/laravel";
 import {
+  DataTableActiveFilters,
   DataTableBody,
   DataTableBulkActions,
   DataTableColumnVisibilityMenu,
@@ -402,6 +403,8 @@ function DataTableInner<TData>(
           </div>
         </DataTableToolbar>
       )}
+
+      {props.filters !== false && <DataTableActiveFilters />}
 
       {props.bulkActions && (
         <DataTableBulkActions>
