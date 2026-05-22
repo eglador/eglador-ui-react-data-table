@@ -4,13 +4,13 @@ import { Meta } from "@storybook/addon-docs/blocks";
 
 # Getting Started
 
-İlk DataTable örneği, custom column ile zenginleştirme ve headless mod.
+Your first DataTable example, enriched with custom columns, plus headless mode.
 
 ---
 
-## En basit kullanım
+## Simplest usage
 
-Schema-driven mod. Frontend hiçbir kolon yapılandırması yapmaz; her şey schema'dan gelir:
+Schema-driven mode. The frontend configures no columns at all — everything comes from the schema:
 
 ```tsx
 import { DataTable } from "eglador-ui-react-data-table";
@@ -20,7 +20,7 @@ export default function ArticlesPage() {
 }
 ```
 
-Schema endpoint otomatik infer edilir: `/api/v1/articles` → `/api/v1/schema/articles`. Manuel set etmek isterseniz:
+The schema endpoint is inferred automatically: `/api/v1/articles` → `/api/v1/schema/articles`. To set it manually:
 
 ```tsx
 <DataTable
@@ -31,7 +31,7 @@ Schema endpoint otomatik infer edilir: `/api/v1/articles` → `/api/v1/schema/ar
 
 ---
 
-## Auth header'ları
+## Auth headers
 
 ```tsx
 <DataTable
@@ -40,22 +40,22 @@ Schema endpoint otomatik infer edilir: `/api/v1/articles` → `/api/v1/schema/ar
 />
 ```
 
-`headers` fonksiyon olarak verilirse her istekte çağrılır (token rotation güvenli).
+When `headers` is a function it's called on every request (safe for token rotation).
 
 ---
 
-## Toolbar özellikleri
+## Toolbar features
 
-Açıp kapatın:
+Toggle them on or off:
 
 ```tsx
 <DataTable
   endpoint="/api/v1/articles"
-  search                  // arama kutusu
+  search                  // search box
   filters                 // filter chip bar + Add filter
-  refresh                 // refresh butonu
+  refresh                 // refresh button
   density                 // compact/comfortable/spacious toggle
-  columnVisibility        // kolon görünürlük menüsü
+  columnVisibility        // column visibility menu
   pagination              // pagination bar
 />
 ```
@@ -64,7 +64,7 @@ Açıp kapatın:
 
 ## Custom column — render override
 
-Schema'dan gelen kolon değerlerini özelleştirmek için:
+Customize values coming from the schema:
 
 ```tsx
 <DataTable
@@ -100,13 +100,13 @@ Schema'dan gelen kolon değerlerini özelleştirmek için:
 />
 ```
 
-`customColumns` schema'da olan field'ları zenginleştirir; **schema'da olmayan field'lar tabloda görünmez**. Label vermezseniz schema'nın `field.label`'ı kullanılır.
+`customColumns` enrich fields that are already in the schema; **fields not in the schema do not appear in the table**. If you don't supply a label, the schema's `field.label` is used.
 
 ---
 
 ## Added columns — select, actions, drag
 
-Schema'da olmayan ek kolonlar:
+Extra columns that aren't in the schema:
 
 ```tsx
 <DataTable
@@ -118,7 +118,7 @@ Schema'da olmayan ek kolonlar:
       field: "actions",
       type: "actions",
       position: "end",
-      label: "İşlemler",
+      label: "Actions",
       render: (_v, row, ctx) => (
         <div className="flex gap-1 justify-end">
           <button onClick={() => editArticle(row.id)}>Edit</button>
@@ -135,7 +135,7 @@ Schema'da olmayan ek kolonlar:
 />
 ```
 
-Sticky pozisyonlama: `select` start (sol sticky), `actions` end (sağ sticky) — default.
+Sticky positioning defaults: `select` start (sticky left), `actions` end (sticky right).
 
 ---
 
@@ -147,35 +147,35 @@ Sticky pozisyonlama: `select` start (sol sticky), `actions` end (sağ sticky) �
   selection="multiple"
   bulkActions={({ rows, clear }) => (
     <>
-      <button onClick={() => archiveAll(rows)}>Arşivle ({rows.length})</button>
-      <button onClick={clear}>Seçimi iptal et</button>
+      <button onClick={() => archiveAll(rows)}>Archive ({rows.length})</button>
+      <button onClick={clear}>Clear selection</button>
     </>
   )}
 />
 ```
 
-Bir veya birden fazla satır seçildiğinde toolbar üzerinde görünür.
+Appears above the toolbar whenever one or more rows are selected.
 
 ---
 
 ## URL sync
 
-Filter, sort, pagination state'i URL'e yansır → sayfa yenilense bile state korunur:
+Filter, sort, and pagination state mirror into the URL — state survives a page reload:
 
 ```tsx
 <DataTable
   endpoint="/api/v1/articles"
-  urlSync                                 // veya { paramPrefix: "art_" }
+  urlSync                                 // or { paramPrefix: "art_" }
 />
 ```
 
-Birden fazla DataTable aynı sayfada varsa farklı prefix verin: `urlSync={{ paramPrefix: "art_" }}` ve `urlSync={{ paramPrefix: "usr_" }}`.
+If multiple DataTables live on the same page, use distinct prefixes: `urlSync={{ paramPrefix: "art_" }}` and `urlSync={{ paramPrefix: "usr_" }}`.
 
 ---
 
-## Compound API — tam markup kontrolü
+## Compound API — full markup control
 
-Toolbar / pagination / body yerleşimini siz yönetin:
+Lay out the toolbar / pagination / body yourself:
 
 ```tsx
 import {
@@ -187,7 +187,7 @@ import {
 
 function CustomTable() {
   const { schema } = useSchema(inferSchemaEndpoint("/api/v1/articles"));
-  // ... kendi source/columns kur, useDataTable ile state al ...
+  // ... build your own source/columns, get state via useDataTable ...
 
   return (
     <DataTable.Root table={table}>
@@ -216,9 +216,9 @@ function CustomTable() {
 
 ---
 
-## Headless mod — `useDataTable`
+## Headless mode — `useDataTable`
 
-Tam custom render için sadece state machine'i kullanın:
+For fully custom rendering, use just the state machine:
 
 ```tsx
 import { useDataTable, useDataSource, laravelAdapter } from "eglador-ui-react-data-table";
@@ -232,8 +232,8 @@ function HeadlessTable() {
   const table = useDataTable({
     source,
     columns: [
-      { id: "title", accessorKey: "title", header: "Başlık", sortable: true },
-      { id: "status", accessorKey: "status", header: "Durum" },
+      { id: "title", accessorKey: "title", header: "Title", sortable: true },
+      { id: "status", accessorKey: "status", header: "Status" },
     ],
     initialState: {
       pagination: { mode: "offset", page: 1, pageSize: 25 },
@@ -246,19 +246,19 @@ function HeadlessTable() {
       {table.rows.map((row) => (
         <div key={row.id}>{row.title}</div>
       ))}
-      <button onClick={() => table.pagination.next()}>Sonraki</button>
+      <button onClick={() => table.pagination.next()}>Next</button>
     </div>
   );
 }
 ```
 
-Hiç DOM render etmez — sadece state + helpers.
+Renders no DOM — just state + helpers.
 
 ---
 
-## Daha fazla
+## More
 
-- [Playground](?path=/story/data-table-playground--playground) — tüm propları canlı tara
-- [Welcome](?path=/docs/welcome--docs) — schema yapısı ve overview
-- [Installation](?path=/docs/installation--docs) — kurulum & setup
-- [GitHub](https://github.com/eglador/eglador-ui-react-data-table) — issue / PR
+- [Playground](?path=/story/data-table-playground--playground) — try every prop live
+- [Welcome](?path=/docs/welcome--docs) — schema structure and overview
+- [Installation](?path=/docs/installation--docs) — install & setup
+- [GitHub](https://github.com/eglador/eglador-ui-react-data-table) — issues / PRs

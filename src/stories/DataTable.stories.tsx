@@ -151,7 +151,7 @@ const meta: Meta<PlaygroundArgs> = {
     bulkActionsBar: true,
     addColumns: [
       { field: "select", type: "select", position: "start" },
-      { field: "actions", type: "actions", position: "end", label: "İşlemler" },
+      { field: "actions", type: "actions", position: "end", label: "Actions" },
     ],
 
     urlSync: false,
