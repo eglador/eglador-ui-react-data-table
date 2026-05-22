@@ -16,23 +16,23 @@ import { Meta } from "@storybook/addon-docs/blocks";
   <img src="https://img.shields.io/badge/typescript-ready-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="typescript" />
 </div>
 
-Schema-driven, accessible data table for React — tek endpoint'ten kolon, filter, sort, include, pagination ve form metadata'sını okuyup tabloyu otomatik kurar. Tailwind v4, zero runtime dependencies, TypeScript-first.
+Schema-driven, accessible data table for React — reads columns, filters, sort, includes, pagination, and form metadata from a single endpoint and wires the table automatically. Tailwind v4, zero runtime dependencies, TypeScript-first.
 
 ---
 
-## Schema-driven nedir?
+## What is schema-driven?
 
-Backend bir `/api/v1/schema/{resource}` endpoint'i sunar; her field için tüm metadata tek yerdedir:
+The backend exposes a `/api/v1/schema/{resource}` endpoint with every field's metadata in one place:
 
 ```json
 {
   "data": {
     "type": "articles",
-    "labels": { "singular": "Makale", "plural": "Makaleler" },
+    "labels": { "singular": "Article", "plural": "Articles" },
     "fields": {
       "title": {
         "type": "string",
-        "label": "Başlık",
+        "label": "Title",
         "in": ["list", "show", "create", "update"],
         "sortable": true,
         "searchable": true,
@@ -41,10 +41,10 @@ Backend bir `/api/v1/schema/{resource}` endpoint'i sunar; her field için tüm m
       }
     },
     "relations": {
-      "category": { "type": "belongs_to", "target": "categories", "label": "Kategori", "default_loaded": true, "in": ["list", "show"] }
+      "category": { "type": "belongs_to", "target": "categories", "label": "Category", "default_loaded": true, "in": ["list", "show"] }
     },
     "virtual_filters": [
-      { "field": "search", "operator": "fulltext", "label": "Arama", "min_length": 2 }
+      { "field": "search", "operator": "fulltext", "label": "Search", "min_length": 2 }
     ],
     "endpoints": {
       "list": { "method": "GET", "path": "", "default_sort": "-published_at", "pagination": { "default_size": 15, "max_size": 100 } }
@@ -53,54 +53,54 @@ Backend bir `/api/v1/schema/{resource}` endpoint'i sunar; her field için tüm m
 }
 ```
 
-Frontend tarafı sadece şu kadar:
+The frontend side is just:
 
 ```tsx
 <DataTable endpoint="/api/v1/articles" />
 ```
 
-Otomatik gelen davranışlar:
+Wired automatically:
 
-- Sütun başlıkları, filter chip'leri, search placeholder — schema label'larından
-- Sortable kolonlar — `field.sortable === true`
-- Default sort — `endpoints.list.default_sort`
-- Filter UI türleri — `field.filter.operator`'a göre (date / select / boolean / text)
-- Async select option'ları — `field.source` lookup endpoint'inden
-- Relation render — `name` / `title` / `slug` otomatik
-- Default visible kolon kontrolü — `field.default_visible: false`
-- Pagination param'ları — `pagination.number_parameter / size_parameter`
-- Title — `labels.plural`
+- Column headers, filter chips, search placeholder — from schema labels
+- Sortable columns — when `field.sortable === true`
+- Default sort — from `endpoints.list.default_sort`
+- Filter UI type — picked from `field.filter.operator` (date / select / boolean / text)
+- Async select options — fetched from `field.source` lookup endpoint
+- Relation rendering — auto-extracted from `name` / `title` / `slug`
+- Default visible column control — `field.default_visible: false`
+- Pagination params — `pagination.number_parameter / size_parameter`
+- Title — from `labels.plural`
 
 ---
 
-## Öne çıkanlar
+## Highlights
 
-- **Schema-driven** — backend tek doğruluk kaynağı; frontend kolon yapılandırması yapmaz
-- **Compound API** — `<DataTable.Root>`, `.Header`, `.Body`, `.Row`, `.Cell`, `.Toolbar`, `.Search`, `.FilterBar`, `.Pagination` vb. tam markup kontrolü için
-- **Headless hook** — `useDataTable`, `useAutoColumns`, `useSchema` — kendi render'ını kur
+- **Schema-driven** — backend is the single source of truth; the frontend never hand-configures columns
+- **Compound API** — `<DataTable.Root>`, `.Header`, `.Body`, `.Row`, `.Cell`, `.Toolbar`, `.Search`, `.FilterBar`, `.Pagination`, etc. for full markup control
+- **Headless hooks** — `useDataTable`, `useAutoColumns`, `useSchema` — build your own render
 - **Spatie Query Builder adapter** — `filter[X]=Y`, `sort=-X`, `include=a,b`, `page[size]=N`
-- **16 filter operatörü** — eq, neq, gt, gte, lt, lte, contains, starts_with, ends_with, in, not_in, between, is_null, is_not_null, is_true, is_false
-- **Multi-sort** — Shift/Cmd + tıklama
+- **16 filter operators** — eq, neq, gt, gte, lt, lte, contains, starts_with, ends_with, in, not_in, between, is_null, is_not_null, is_true, is_false
+- **Multi-sort** — Shift/Cmd + click
 - **Selection** — single / multiple, controlled & uncontrolled
-- **URL sync** — Next.js / React Router / manuel adapter
+- **URL sync** — Next.js / React Router / manual adapter
 - **Density** — compact / comfortable / spacious
 - **Variants** — default / bordered / striped / minimal
-- **Sticky header & footer** — container `maxHeight` ile aktif
+- **Sticky header & footer** — enabled by container `maxHeight`
 - **Custom columns** — render override, accessor, label, width, sticky, align
 - **Added columns** — select / drag / actions / expander
-- **Auto relation render** — `category.name` / `tags[].name` otomatik çıkarım
-- **i18n** — tüm label'lar schema'dan (UI generic yazılar için ayrı)
-- **Tailwind v4** — zinc-only paleti, `rounded-sm`, modern utility-first
+- **Auto relation rendering** — `category.name` / `tags[].name` auto-derived
+- **i18n** — every label comes from the schema (generic UI strings are separate)
+- **Tailwind v4** — zinc-only palette, `rounded-sm`, modern utility-first
 - **Zero runtime deps** — `clsx` + `tailwind-merge` pre-bundled
-- **TypeScript-first** — generic over row shape, schema tip-safe
+- **TypeScript-first** — generic over row shape, schema-typed end-to-end
 
 ---
 
-## İçindekiler
+## Table of contents
 
-- [Installation](?path=/docs/installation--docs) — paket kurulumu, peer deps, Tailwind v4 entegrasyonu
-- [Getting Started](?path=/docs/getting-started--docs) — ilk DataTable örneği, custom column, headless mod
-- [Playground](?path=/story/data-table-playground--playground) — tüm propları canlı dene
+- [Installation](?path=/docs/installation--docs) — package install, peer deps, Tailwind v4 integration
+- [Getting Started](?path=/docs/getting-started--docs) — first DataTable example, custom column, headless mode
+- [Playground](?path=/story/data-table-playground--playground) — try every prop live
 
 ---
 
